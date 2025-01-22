@@ -2,3 +2,4 @@ streamlit
 xlsxwriter
 PyPDF2
 pypdf
+openpyxl
