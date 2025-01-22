@@ -1,9 +1,1 @@
-streamlit==1.24.0
-pandas==1.2.4
-time
-datetime
-xlsxwriter
-io
-PyPDF2
-zipfile
 time
