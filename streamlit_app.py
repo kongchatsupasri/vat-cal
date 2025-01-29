@@ -10,6 +10,355 @@ from PyPDF2 import PdfMerger
 import zipfile
 import pypdf
 import time
+#%% function for page 'คำนวณ vat'
+@st.cache_data(show_spinner=False)
+def vat_cal_sale_shopee(store, df):
+
+    df = df[~df['สถานะการสั่งซื้อ'].isin(['ยกเลิกแล้ว'])].drop_duplicates()
+
+    df['year'] = pd.to_datetime(df['วันที่ทำการสั่งซื้อ'], format = '%Y-%m-%d %H:%M').dt.year #สำหรับตรวจว่า ปีของข้อมูลที่อัพโหลดมา ตรงกับปีที่เลือกไหม
+    df['month'] = pd.to_datetime(df['วันที่ทำการสั่งซื้อ'], format = '%Y-%m-%d %H:%M').dt.month #สำหรับตรวจว่าข้อมูลครบทุกเดือน
+
+    #check ว่าปีที่เลือก กับปีในไฟล์ตรงกัน
+    if df[df['year'].astype(int) != int(year)].shape[0] != 0 and df[df['year'].astype(int) == int(year)].shape[0] == 0: 
+        st.error(f'ข้อมูลร้านค้า {store} จาก Shopee: ปีที่เลือกคือเดือน {month}/{year} แต่ไม่มีข้อมูลของเดือนนี้' + '--> อาจเลือกไฟล์ผิด', icon="🚨")
+        # st.dataframe(df)
+        return None
+    
+    else:
+        if df[(df['year'].astype(int) != int(year)) & (df['month'].astype(int) != int(month))].shape[0] != 0:
+            st.warning(f'ข้อมูลร้านค้า {store} จาก Shopee: ปีที่เลือกคือเดือน {month}/{year} มีข้อมูลของเดือนอื่นติดมาด้วย' + '--> กรุณาตรวจสอบ', icon="⚠️")
+
+        #screen out year
+        df = df[(df['year'] == int(year)) & (df['month'] == month)].reset_index(drop = True)
+
+        uncompleted_order_count = len(df[df['สถานะการสั่งซื้อ'] != 'สำเร็จแล้ว']['หมายเลขคำสั่งซื้อ'].unique().tolist())
+        if uncompleted_order_count != 0:
+            st.warning(f"ไฟล์ของร้าน {store} (Shopee) ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
+
+        df['วันที่ทำการสั่งซื้อ'] = pd.to_datetime(df['วันที่ทำการสั่งซื้อ'], format = '%Y-%m-%d %H:%M').dt.date
+        # shopee_sale_df['หมายเลขคำสั่งซื้อ'] = shopee_sale_df['หมายเลขคำสั่งซื้อ'].astype(str)
+        df = df[['สถานะการสั่งซื้อ', 'วันที่ทำการสั่งซื้อ', 'หมายเลขคำสั่งซื้อ', 'ชื่อผู้ใช้ (ผู้ซื้อ)', 'ราคาขายสุทธิ', 'โค้ดส่วนลดชำระโดยผู้ขาย', 
+                                        'ค่าจัดส่งที่ชำระโดยผู้ซื้อ', 'ค่าจัดส่งที่ Shopee ออกให้โดยประมาณ', 'ค่าจัดส่งสินค้าคืน', 'ค่าจัดส่งโดยประมาณ']]
+
+        sale_ls = []
+        for order_id in df['หมายเลขคำสั่งซื้อ'].unique():
+            df1 = df[df['หมายเลขคำสั่งซื้อ'] == order_id].reset_index(drop = True)
+            order_date = df1.loc[0, 'วันที่ทำการสั่งซื้อ']
+            order_no = df1.loc[0, 'หมายเลขคำสั่งซื้อ']
+            customer_name = df1.loc[0, 'ชื่อผู้ใช้ (ผู้ซื้อ)']
+            seller_discount_code = float(df1.loc[0, 'โค้ดส่วนลดชำระโดยผู้ขาย'])
+            include_vat = df1['ราคาขายสุทธิ'].sum() - seller_discount_code
+            vat = round((include_vat * 0.07) / 1.07, 2)
+            before_vat = include_vat - vat
+            status = df1.loc[0, 'สถานะการสั่งซื้อ']
+
+            sale_ls.append(['Shopee', store, 'สินค้า', order_date, status, order_no, customer_name, before_vat, vat, include_vat])
+
+            shipping_fee_from_buyer = df1.loc[0, 'ค่าจัดส่งที่ชำระโดยผู้ซื้อ']
+            if float(shipping_fee_from_buyer) != 0:
+                shipping_vat = round((shipping_fee_from_buyer * 0.07) / 1.07, 2)
+                shipping_before_vat = shipping_fee_from_buyer - shipping_vat
+                sale_ls.append(['Shopee', store, 'บริการ', order_date, status, order_no, customer_name, shipping_before_vat, shipping_vat, shipping_fee_from_buyer])
+
+        shopee_sale_df_result = pd.DataFrame(sale_ls, columns = ['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat'])
+        shopee_sale_df_result = shopee_sale_df_result[['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat']]
+
+        return shopee_sale_df_result
+    
+@st.cache_data(show_spinner=False)
+def vat_cal_sale_lazada(store, df):
+
+    df = df[~df['status'].isin(['canceled', 'returned', 'Package Returned'])].drop_duplicates().reset_index(drop = True)
+
+    df['year'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.year #สำหรับตรวจว่า ปีของข้อมูลที่อัพโหลดมา ตรงกับปีที่เลือกไหม
+    df['month'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.month #สำหรับตรวจว่าข้อมูลครบทุกเดือน
+
+    #check ว่าปีที่เลือก กับปีในไฟล์ตรงกัน
+    if df[df['year'].astype(int) != int(year)].shape[0] != 0 and df[df['year'].astype(int) == int(year)].shape[0] == 0: 
+        st.error(f'ข้อมูลร้านค้า {store} จาก Lazada: ปีที่เลือกคือปี {year} / แต่มีแต่ข้อมูลของปี' + ', '.join(df['year'].astype(str).unique().tolist()) + '--> อาจเลือกไฟล์ผิด', icon="🚨")
+        # st.dataframe(df)
+        return None
+    else:
+        if df[(df['year'].astype(int) != int(year)) & (df['month'].astype(int) != int(month))].shape[0] != 0:
+            st.warning(f'ข้อมูลร้านค้า {store} จาก Lazada: ปีที่เลือกคือเดือน {month}/{year} มีข้อมูลของเดือนอื่นติดมาด้วย' + '--> กรุณาตรวจสอบ', icon="⚠️")
+
+        #screen out year
+        df = df[(df['year'] == int(year)) & (df['month'] == month)].reset_index(drop = True)
+
+        uncompleted_order_count = len(df[df['status'] != 'confirmed']['status'].unique().tolist())
+        if uncompleted_order_count != 0:
+            st.warning(f"ไฟล์ของร้าน {store} (Lazada) ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
+            st.dataframe(df[df['status'] != 'confirmed'])
+        ##################################################################################################
+
+    df['createTime'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.date
+    df = df[['status', 'createTime', 'orderNumber', 'customerName', 'paidPrice', 'sellerDiscountTotal']]
+
+    sale_ls = []
+    for order_id in df['orderNumber'].unique():
+        df1 = df[df['orderNumber'] == order_id].reset_index(drop = True)
+
+        order_date = df1.loc[0, 'createTime']
+        order_no = str(df1.loc[0, 'orderNumber'])
+        customer_name = df1.loc[0, 'customerName']
+        include_vat = df1['paidPrice'].sum()
+        vat = round((include_vat * 0.07) / 1.07, 2)
+        before_vat = include_vat - vat
+
+        status = df1.loc[0, 'status']
+
+        sale_ls.append(['Lazada', store, 'สินค้า', order_date, status, order_no, customer_name, before_vat, vat, include_vat])
+
+    lazada_sale_df_result = pd.DataFrame(sale_ls, columns = ['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat'])
+    lazada_sale_df_result = lazada_sale_df_result[['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat']]
+
+    return lazada_sale_df_result
+
+@st.cache_data(show_spinner=False)
+def vat_cal_sale_tiktok(store, df): 
+    df = df[~df['Order Status'].isin(['Canceled'])]
+    df = df[df['Order Status'] != 'Canceled'].drop_duplicates().reset_index(drop = True)
+
+    df['year'] = pd.to_datetime(df['Created Time'], format = '%d/%m/%Y %H:%M:%S\t').dt.year #สำหรับตรวจว่า ปีของข้อมูลที่อัพโหลดมา ตรงกับปีที่เลือกไหม
+    df['month'] = pd.to_datetime(df['Created Time'], format = '%d/%m/%Y %H:%M:%S\t').dt.month #สำหรับตรวจว่าข้อมูลครบทุกเดือน
+
+    #check ว่าปีที่เลือก กับปีในไฟล์ตรงกัน
+    if df[df['year'].astype(int) != int(year)].shape[0] != 0 and df[df['year'].astype(int) == int(year)].shape[0] == 0: 
+        st.error(f'ข้อมูลร้านค้า {store} | TikTok: ปีที่เลือกคือปี {year} / แต่มีแต่ข้อมูลของปี' + ', '.join(df['year'].astype(str).unique().tolist()) + '--> อาจเลือกไฟล์ผิด', icon="🚨")
+        return None
+    else:
+        if df[(df['year'].astype(int) != int(year)) & (df['month'].astype(int) != int(month))].shape[0] != 0:
+            st.warning(f'ข้อมูลร้านค้า {store} | TikTok: ปีที่เลือกคือเดือน {month}/{year} มีข้อมูลของเดือนอื่นติดมาด้วย' + '--> กรุณาตรวจสอบ', icon="⚠️")
+
+        #screen out year
+        df = df[(df['year'] == int(year)) & (df['month'] == month)].reset_index(drop = True)
+
+        uncompleted_order_count = len(df[df['Order Status'] != 'Completed']['Order Status'].unique().tolist())
+        if uncompleted_order_count != 0:
+            st.warning(f"ไฟล์ของร้าน {store} (TikTok) ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
+            ##########
+
+
+    df['SKU Subtotal Before Discount'] = df['SKU Subtotal Before Discount'].str.replace('THB ', '').str.replace(',', '').astype(float)
+    df['SKU Seller Discount'] = df['SKU Seller Discount'].str.replace('THB ', '').str.replace(',', '').astype(float)
+    df['Shipping Fee After Discount'] = df['Shipping Fee After Discount'].str.replace('THB ', '').str.replace(',', '').astype(float)
+    df = df[['Order Status', 'Created Time', 'Order ID', 'Buyer Username', 'SKU Subtotal Before Discount', 'SKU Seller Discount',
+                                    'Shipping Fee After Discount']]
+
+    sale_ls = []
+    for order_id in df['Order ID'].unique():
+        df1 = df[df['Order ID'] == order_id].reset_index(drop = True)
+
+        order_date = df1.loc[0, 'Created Time']
+        order_no = str(df1.loc[0, 'Order ID']).replace('\t', '')
+        customer_name = df1.loc[0, 'Buyer Username']
+        seller_discount_code = float(df1['SKU Seller Discount'].sum())
+        include_vat = df1['SKU Subtotal Before Discount'].sum() - seller_discount_code
+        vat = round((include_vat * 0.07) / 1.07, 2)
+        before_vat = include_vat - vat
+
+        status = df1.loc[0, 'Order Status']
+
+        sale_ls.append(['TikTok', store, 'สินค้า', order_date, status, order_no, customer_name, before_vat, vat, include_vat])
+
+
+        shipping_fee_from_buyer = df1.loc[0, 'Shipping Fee After Discount']
+
+        if float(shipping_fee_from_buyer) != 0:
+            shipping_vat = round((shipping_fee_from_buyer * 0.07) / 1.07, 2)
+            shipping_before_vat = shipping_fee_from_buyer - shipping_vat
+            sale_ls.append(['TikTok', store, 'บริการ', order_date, status, order_no, customer_name, shipping_before_vat, shipping_vat, shipping_fee_from_buyer])
+
+
+    tiktok_sale_df_result = pd.DataFrame(sale_ls, columns = ['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat'])
+    tiktok_sale_df_result = tiktok_sale_df_result[['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat']]
+
+    return tiktok_sale_df_result  
+
+@st.cache_data(show_spinner=False)
+def vat_cal_commission_shopee(store_name, zip_file):
+    ls = []
+    pdf_ls = []
+    # store = key.split('_')[0]
+
+    # if store not in st.session_state['commission_d'].keys():
+    #     st.session_state['commission_d'][store] = {}
+
+    with zipfile.ZipFile(zip_file, 'r') as z:
+        sorted_file_ls = ['-'.join(ls) for ls in sorted([n.split('-') for n in z.namelist() if 'SPX' not in n], key = lambda x: int(x[4]))]
+        progress_bar = st.progress(0, text = 'processing shopee commission pdf')
+                            
+        for i, file_name in enumerate(sorted_file_ls):
+            if 'SPX' in file_name:
+                progress_bar.progress((i + 1) / len(sorted_file_ls), text='reading shopee commission pdf files')
+            else:
+                pdf_file = pypdf.PdfReader(BytesIO(z.read(file_name)))
+
+                doc_date, doc_num, issued_company, before_vat, vat, company_name, company_tax_id = None, None, None, None, None, None, None
+                # st.write(pdf_file.pages[0].extract_text().split('\n'))
+                # break
+                for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
+                    if 'วันที่' in text and 'ภายในวันที่' not in text:
+                        doc_date = pd.to_datetime(text.split(' ')[-1], format = '%d/%m/%Y').date()
+                    elif 'Co.,' in text:
+                        issued_company = text
+                    elif 'เลขที่' in text:
+                        # st.write(text)
+                        doc_num = text.split('No. ')[-1] + ' ' + pdf_file.pages[0].extract_text().split('\n')[j + 1]
+                        if 'เลขประจำตัวผู้เสียภาษี' in text:
+                            company_tax_id = text.split('Tax ID ')[1].split('เลขที่/')[0]
+                    elif 'เลขประจำตัวผู้เสียภาษี' in text:
+                        company_tax_id = text.split('Tax ID ')[1].split('เลขที่/')[0]
+                    elif 'after discount' in text:
+                        before_vat = round(float(text.split(' ')[-1].replace(',', '')), 2)
+                    elif 'VAT' in text and '7%' in text:
+                        vat = round(float(text.split(' ')[-1].replace(',', '')), 2)
+                    elif 'Customer name' in text:
+                        company_name = text.split('Customer name ')[-1]
+                                
+            if None in [doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat]:
+                st.error(f'something wrong with {store} Shopee commission file: {file_name}', icon="🚨")
+                # st.write([doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
+                # st.write(pdf_file.pages[0].extract_text().split('\n'))
+                return None
+            else:
+                ls.append([store_name, 'Shopee', doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
+                pdf_ls.append([company_name, 'Shopee', company_tax_id, doc_date, BytesIO(z.read(file_name)), store_name])
+                progress_bar.progress((i + 1) / len(sorted_file_ls), text = f'reading {store} Shopee commission files')
+
+        progress_bar.empty()
+
+    return  {
+        'commission_df': pd.DataFrame(ls, columns = ['store_name', 'platform', 'doc_date', 'company_name', 'company_tax_id', 'issue_comapny', 'doc_num', 'before_vat', 'vat']), 
+        'pdf_df': pd.DataFrame(pdf_ls, columns = ['company_name', 'platform', 'company_tax_id', 'doc_date', 'pdf_file', 'store_name'])
+        }
+
+@st.cache_data(show_spinner=False)
+def vat_cal_commission_lazada(store_name, file_ls):
+    ls = []
+    pdf_ls = []
+    doc_num_ls = []
+
+    progress_bar = st.progress(0, text = 'processing Lazada commission pdf')
+    for file_order, file_name in enumerate(file_ls):
+        pdf_file = pypdf.PdfReader(file_name)
+
+        if 'Lazada Express Limited' in pdf_file.pages[0].extract_text() or 'Shipping Fee' in pdf_file.pages[0].extract_text():
+            progress_bar.progress((file_order + 1) / len(file_ls), text = 'reading Lazada commission pdf files')
+        
+        else: 
+            doc_date, doc_num, issued_company, before_vat, vat, company_name, company_tax_id = None, None, None, None, None, None, None
+
+            #มีคำว่า 'TAX INVOICE / RECEIPT'
+            if 'TAX INVOICE / RECEIPT' in pdf_file.pages[0].extract_text():
+                # st.write(pdf_file.pages[0].extract_text().split('\n'))
+                for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
+                    if 'Invoice Date' in text:
+                        doc_date = pd.to_datetime(text.split(': ')[-1], format = '%Y-%m-%d').date()
+                    elif 'Lazada' in text:
+                        issued_company = text
+                    elif 'Total' in text and '(Including Tax)' not in text:
+                        before_vat = float(text.split(' ')[-1].replace(',', ''))
+                    elif '7% (VAT)' in text:
+                        vat = float(text.split(') ')[-1].replace(',', ''))
+                    elif 'Invoice No.:' in text:
+                        doc_num = text.split(' ')[-1]
+                    elif 'TAX INVOICE / RECEIPT' in text:
+                        company_name = pdf_file.pages[0].extract_text().split('\n')[j + 2]
+                        company_tax_id = pdf_file.pages[0].extract_text().split('\n')[j + 7].split('Tax ID: ')[-1].split('Invoice')[0]
+
+                    # break
+            
+            #กรณีอื่น --> ตอนนี้ที่เจอคือ ใบคืนเงิน
+            elif 'CREDIT NOTE' in pdf_file.pages[0].extract_text() and 'Reversal Commission' in pdf_file.pages[0].extract_text():
+                # st.write(pdf_file.pages[0].extract_text().split('\n'))
+                for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
+                    if 'Date: ' in text:
+                        doc_date = pd.to_datetime(text.split(': ')[-1], format = '%Y-%m-%d').date()
+                    elif 'Lazada' in text:
+                        issued_company = text
+                    elif 'Total' in text and '(Including Tax)' not in text:
+                        before_vat = float(text.split(' ')[-1].replace(',', '')) * -1
+                    elif '7% (VAT)' in text:
+                        vat = float(text.split(') ')[-1].replace(',', '')) * -1
+                    elif 'CREDIT NOTE' in text:
+                        company_name = pdf_file.pages[0].extract_text().split('\n')[j + 2].replace('  ', ' ')
+                        company_tax_id = pdf_file.pages[0].extract_text().split('\n')[j + 7].split('Tax ID: ')[-1].split('Credit Note')[0]
+                    elif 'Credit Note: ' in text:
+                        doc_num = text.split('Credit Note: ')[-1]
+                    
+            if None in [doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat]:
+                st.error(f'something wrong with {store_name} Lazada commission file: {file_name}', icon="🚨")
+                # st.write([doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
+                return None
+            elif doc_num in doc_num_ls: #ไฟล์ที่อ่าน มีเลขเอกสารซ้ำ น่าจะเพราะอัพโหลดมาซ้ำ
+                progress_bar.progress((file_order + 1) / len(file_ls), text = 'reading Lazada commission pdf files')
+            else:
+                ls.append([store_name, 'Lazada', doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
+                pdf_ls.append([company_name, 'Lazada', company_tax_id, doc_date, file_name, store_name])
+                doc_num_ls.append(doc_num) #เอามากัน กรณีคนอัพโหลดไฟล์มาซ้ำ
+                progress_bar.progress((i + 1) / len(file_ls), text = f'reading {store_name} Shopee commission files')
+
+        progress_bar.progress((file_order + 1) / len(file_ls), text = 'reading Lazada commission pdf files')
+
+    progress_bar.empty()
+
+    return {
+        'commission_df': pd.DataFrame(ls, columns = ['store_name', 'platform', 'doc_date', 'company_name', 'company_tax_id', 'issue_comapny', 'doc_num', 'before_vat', 'vat']), 
+        'pdf_df': pd.DataFrame(pdf_ls, columns = ['company_name', 'platform', 'company_tax_id', 'doc_date', 'pdf_file', 'store_name'])
+    }
+
+
+st.cache_data(show_spinner = False)
+def vat_cal_commission_tiktok(store_name, zip_file):
+    ls = []
+    pdf_ls = []
+
+    progress_bar = st.progress(0, text = 'processing TikTok commission pdf')
+    with zipfile.ZipFile(zip_file,'r') as z:
+        sorted_file_ls = sorted([n for n in z.namelist() if 'THJV' not in n and 'TTSTHAC' not in n])
+        progress_bar = st.progress(0, text = 'processing tiktok commission pdf')
+
+        for i, file_name in enumerate(sorted_file_ls):
+            if 'THJV' in file_name or 'TTSTHAC' in file_name:
+                progress_bar.progress((i + 1) / len(sorted_file_ls), text='reading tiktok commission pdf files')
+            else:
+                # pdf_file = pypdf.PdfReader(BytesIO(z.read(file_name)))
+                pdf_file = pypdf.PdfReader(BytesIO(z.read(file_name)))
+                doc_date, doc_num, issued_company, before_vat, vat, company_name, company_tax_id = None, None, None, None, None, None, None
+                for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
+                    if 'Invoice date' in text:
+                        doc_date = pd.to_datetime(text.split(' : ')[-1], format = '%b %d, %Y').date()
+                    elif 'Ltd.' in text and 'prepared by' not in text and 'For corporate' not in text:
+                        issued_company = text
+                    elif 'Invoice number : ' in text:
+                        doc_num = text.split('Invoice number : ')[-1]
+                    elif 'Subtotal (excluding VAT)' in text:
+                        before_vat = float(text.split(' ')[-1].replace(',', '').replace('฿', ''))
+                    elif 'Total VAT' in text and '7%' in text:
+                        vat = float(text.split(' ')[-1].replace(',', '').replace('฿', '')) 
+                    elif 'Client Name' in text:
+                        company_name = text.split('Client Name: ')[-1]
+                    elif 'Tax ID:' in text:
+                        company_tax_id = text.split(': ')[-1]
+
+                if None in [doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat]:
+                    st.error(f'something wrong with {store} TikTok commission file: {file_name}', icon="🚨")
+                    return None
+                else:
+                    ls.append([store_name, 'TikTok', doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
+                    pdf_ls.append([company_name, 'TikTok', company_tax_id, doc_date, BytesIO(z.read(file_name)), store_name])
+                    progress_bar.progress((i + 1) / len(sorted_file_ls), text = f'reading {store} Shopee commission files')
+
+        
+        progress_bar.empty()
+        return {
+                'commission_df': pd.DataFrame(ls, columns = ['store_name', 'platform', 'doc_date', 'company_name', 'company_tax_id', 'issue_comapny', 'doc_num', 'before_vat', 'vat']), 
+                'pdf_df': pd.DataFrame(pdf_ls, columns = ['company_name', 'platform', 'company_tax_id', 'doc_date', 'pdf_file', 'store_name'])
+            }
+        
+        progress_bar.empty()
 #%% sidebar
 st.set_page_config(layout="wide")
 
@@ -490,7 +839,6 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
 
 elif sidebar_radio == 'คำนวณ VAT':
     
-
     st.write('')
     st.header(f'👍VAT cal: {sidebar_radio}')
     st.divider()
@@ -498,12 +846,12 @@ elif sidebar_radio == 'คำนวณ VAT':
     st.subheader('1. เลือกเดือนที่ต้องการคำนวณ VAT')
     selected_month = st.selectbox(
         label = 'select_month', 
-        options = ([(pd.to_datetime('today').replace(day = 1) - pd.DateOffset(months = i)).strftime('%b, %Y') for i in range(1, 7)]), 
+        options = ([(pd.to_datetime('today').replace(day = 1) - pd.DateOffset(months = i)).strftime('%Y-%m') for i in range(1, 7)]), 
         index = 0, 
         label_visibility = 'collapsed'
     )
-    month = pd.to_datetime(selected_month.split(', ')[0], format = '%b').month
-    year = pd.to_datetime(selected_month.split(', ')[1], format = '%Y').year
+    month = pd.to_datetime(selected_month.split('-')[-1], format = '%m').month
+    year = pd.to_datetime(selected_month.split('-')[0], format = '%Y').year
 
     if len([store_name for store_name in store_name_ls if store_name != '']) == store_number:
         st.divider()
@@ -674,399 +1022,550 @@ elif sidebar_radio == 'คำนวณ VAT':
         if check_d == None:
             check_d = {"aa": None}
 
-        if None in check_d.values() or [] in check_d.values(): 
+        # st.write(check_d)
+        check_ls = list(dict.fromkeys(['aaa' if value is not None and value != [] else None for value in check_d.values()]))
+        # st.write(check_ls)
+
+
+        if 'aaa' not in check_ls: #None in check_d.values() or [] in check_d.values(): 
             st.write('please upload all files')
         else:
-            if st.button('calculate', ):
-                sale_d = {}
-                commission_d = {}
+            if "calculate_clicked" not in st.session_state:
+                st.session_state.calculate_clicked = False
+            if "selected_names" not in st.session_state:
+                st.session_state.selected_names = set()
+            if 'sale_d' not in st.session_state:
+                st.session_state['sale_d'] = {}
+                # for store_name in store_name_ls:
+                #     if store_name not in st.session_state['sale_d'].keys():
+                #         st.session_state['sale_d'][store_name] = {}
+            if 'commission_d' not in st.session_state:
+                st.session_state['commission_d'] = {}
+                # for store_name in store_name_ls:
+                #     if store_name not in st.session_state['commission_d'].keys():
+                #         st.session_state['commission_d'][store_name] = {}
 
-                for key, value in st.session_state.items(): #value = uploaded zip file
+            cal_col1, cal_col2, cal_col3 = st.columns([2, 1, 2])
+            with cal_col2:
+                if st.button('calculate', use_container_width = True):
+                    st.session_state.calculate_clicked = True
+                    st.session_state.selected_names = set()
+
+            if st.session_state.calculate_clicked:
+                # st.session_state['sale_d'] = {}
+                # st.session_state['commission_d'] = {}
+
+                # st.write(st.session_state.keys())
+                
+                for key, value in st.session_state.items(): #value = uploaded file
                     ############## sale ##############
-                    if '_sale_raw_file' in key and 'Shopee' in key:
-                        store = key.split('_')[0]
-                        if store not in sale_d.keys():
-                            sale_d[store] = {}
+                    if value != None:
+                        if '_sale_raw_file' in key and 'Shopee' in key:
+                            store = key.split('_')[0]
+                            if store not in st.session_state['sale_d'].keys():
+                                st.session_state['sale_d'][store] = {}
 
-                        df = pd.read_excel(value, converters={'หมายเลขคำสั่งซื้อ':str})
-                        df = df[~df['สถานะการสั่งซื้อ'].isin(['ยกเลิกแล้ว'])].drop_duplicates()
+                            df = pd.read_excel(value, converters={'หมายเลขคำสั่งซื้อ':str})
+                            # df = df[~df['สถานะการสั่งซื้อ'].isin(['ยกเลิกแล้ว'])].drop_duplicates()
 
-                        df['year'] = pd.to_datetime(df['วันที่ทำการสั่งซื้อ'], format = '%Y-%m-%d %H:%M').dt.year #สำหรับตรวจว่า ปีของข้อมูลที่อัพโหลดมา ตรงกับปีที่เลือกไหม
-                        df['month'] = pd.to_datetime(df['วันที่ทำการสั่งซื้อ'], format = '%Y-%m-%d %H:%M').dt.month #สำหรับตรวจว่าข้อมูลครบทุกเดือน
+                            # df['year'] = pd.to_datetime(df['วันที่ทำการสั่งซื้อ'], format = '%Y-%m-%d %H:%M').dt.year #สำหรับตรวจว่า ปีของข้อมูลที่อัพโหลดมา ตรงกับปีที่เลือกไหม
+                            # df['month'] = pd.to_datetime(df['วันที่ทำการสั่งซื้อ'], format = '%Y-%m-%d %H:%M').dt.month #สำหรับตรวจว่าข้อมูลครบทุกเดือน
 
-                        #check ว่าปีที่เลือก กับปีในไฟล์ตรงกัน
-                        if df[df['year'].astype(int) != int(year)].shape[0] != 0 and df[df['year'].astype(int) == int(year)].shape[0] == 0: 
-                            st.error(f'ข้อมูลร้านค้า {store} จาก Shopee: ปีที่เลือกคือเดือน {month}/{year} แต่ไม่มีข้อมูลของเดือนนี้' + '--> อาจเลือกไฟล์ผิด', icon="🚨")
-                            break
-                        else:
-                            if df[(df['year'].astype(int) != int(year)) & (df['month'].astype(int) != int(month))].shape[0] != 0:
-                                st.warning(f'ข้อมูลร้านค้า {store} จาก Shopee: ปีที่เลือกคือเดือน {month}/{year} มีข้อมูลของเดือนอื่นติดมาด้วย' + '--> กรุณาตรวจสอบ', icon="⚠️")
+                            # #check ว่าปีที่เลือก กับปีในไฟล์ตรงกัน
+                            # if df[df['year'].astype(int) != int(year)].shape[0] != 0 and df[df['year'].astype(int) == int(year)].shape[0] == 0: 
+                            #     st.error(f'ข้อมูลร้านค้า {store} จาก Shopee: ปีที่เลือกคือเดือน {month}/{year} แต่ไม่มีข้อมูลของเดือนนี้' + '--> อาจเลือกไฟล์ผิด', icon="🚨")
+                            #     break
+                            # else:
+                            #     if df[(df['year'].astype(int) != int(year)) & (df['month'].astype(int) != int(month))].shape[0] != 0:
+                            #         st.warning(f'ข้อมูลร้านค้า {store} จาก Shopee: ปีที่เลือกคือเดือน {month}/{year} มีข้อมูลของเดือนอื่นติดมาด้วย' + '--> กรุณาตรวจสอบ', icon="⚠️")
 
-                            #screen out year
-                            df = df[(df['year'] == int(year)) & (df['month'] == month)].reset_index(drop = True)
+                            #     #screen out year
+                            #     df = df[(df['year'] == int(year)) & (df['month'] == month)].reset_index(drop = True)
 
-                            uncompleted_order_count = len(df[df['สถานะการสั่งซื้อ'] != 'สำเร็จแล้ว']['หมายเลขคำสั่งซื้อ'].unique().tolist())
-                            if uncompleted_order_count != 0:
-                                st.warning(f"ไฟล์ของร้าน {store} (Shopee) ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
+                            #     uncompleted_order_count = len(df[df['สถานะการสั่งซื้อ'] != 'สำเร็จแล้ว']['หมายเลขคำสั่งซื้อ'].unique().tolist())
+                            #     if uncompleted_order_count != 0:
+                            #         st.warning(f"ไฟล์ของร้าน {store} (Shopee) ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
 
-                            df['วันที่ทำการสั่งซื้อ'] = pd.to_datetime(df['วันที่ทำการสั่งซื้อ'], format = '%Y-%m-%d %H:%M').dt.date
-                            # shopee_sale_df['หมายเลขคำสั่งซื้อ'] = shopee_sale_df['หมายเลขคำสั่งซื้อ'].astype(str)
-                            df = df[['สถานะการสั่งซื้อ', 'วันที่ทำการสั่งซื้อ', 'หมายเลขคำสั่งซื้อ', 'ชื่อผู้ใช้ (ผู้ซื้อ)', 'ราคาขายสุทธิ', 'โค้ดส่วนลดชำระโดยผู้ขาย', 
-                                                            'ค่าจัดส่งที่ชำระโดยผู้ซื้อ', 'ค่าจัดส่งที่ Shopee ออกให้โดยประมาณ', 'ค่าจัดส่งสินค้าคืน', 'ค่าจัดส่งโดยประมาณ']]
+                            #     df['วันที่ทำการสั่งซื้อ'] = pd.to_datetime(df['วันที่ทำการสั่งซื้อ'], format = '%Y-%m-%d %H:%M').dt.date
+                            #     # shopee_sale_df['หมายเลขคำสั่งซื้อ'] = shopee_sale_df['หมายเลขคำสั่งซื้อ'].astype(str)
+                            #     df = df[['สถานะการสั่งซื้อ', 'วันที่ทำการสั่งซื้อ', 'หมายเลขคำสั่งซื้อ', 'ชื่อผู้ใช้ (ผู้ซื้อ)', 'ราคาขายสุทธิ', 'โค้ดส่วนลดชำระโดยผู้ขาย', 
+                            #                                     'ค่าจัดส่งที่ชำระโดยผู้ซื้อ', 'ค่าจัดส่งที่ Shopee ออกให้โดยประมาณ', 'ค่าจัดส่งสินค้าคืน', 'ค่าจัดส่งโดยประมาณ']]
+
+                            #     sale_ls = []
+                            #     for order_id in df['หมายเลขคำสั่งซื้อ'].unique():
+                            #         df1 = df[df['หมายเลขคำสั่งซื้อ'] == order_id].reset_index(drop = True)
+                            #         order_date = df1.loc[0, 'วันที่ทำการสั่งซื้อ']
+                            #         order_no = df1.loc[0, 'หมายเลขคำสั่งซื้อ']
+                            #         customer_name = df1.loc[0, 'ชื่อผู้ใช้ (ผู้ซื้อ)']
+                            #         seller_discount_code = float(df1.loc[0, 'โค้ดส่วนลดชำระโดยผู้ขาย'])
+                            #         include_vat = df1['ราคาขายสุทธิ'].sum() - seller_discount_code
+                            #         vat = round((include_vat * 0.07) / 1.07, 2)
+                            #         before_vat = include_vat - vat
+                            #         status = df1.loc[0, 'สถานะการสั่งซื้อ']
+
+                            #         sale_ls.append(['Shopee', store_name, 'สินค้า', order_date, status, order_no, customer_name, before_vat, vat, include_vat])
+
+                            #         shipping_fee_from_buyer = df1.loc[0, 'ค่าจัดส่งที่ชำระโดยผู้ซื้อ']
+                            #         if float(shipping_fee_from_buyer) != 0:
+                            #             shipping_vat = round((shipping_fee_from_buyer * 0.07) / 1.07, 2)
+                            #             shipping_before_vat = shipping_fee_from_buyer - shipping_vat
+                            #             sale_ls.append(['Shopee', store_name, 'บริการ', order_date, status, order_no, customer_name, shipping_before_vat, shipping_vat, shipping_fee_from_buyer])
+
+                            #     shopee_sale_df_result = pd.DataFrame(sale_ls, columns = ['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat'])
+                            #     shopee_sale_df_result = shopee_sale_df_result[['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat']]
+
+
+                                # st.session_state['sale_d'][store]['Shopee'] = shopee_sale_df_result
+                            st.session_state['sale_d'][store]['Shopee'] = vat_cal_sale_shopee(store, df)
+
+                        elif '_sale_raw_file' in key and 'Lazada' in key:
+                            store = key.split('_')[0]
+                            if store not in st.session_state['sale_d'].keys():
+                                st.session_state['sale_d'][store] = {}
+
+                            df = pd.read_excel(value, converters={'orderNumber':str})
+                            # df = df[~df['status'].isin(['canceled', 'returned', 'Package Returned'])].drop_duplicates().reset_index(drop = True)
+
+                            # df['year'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.year #สำหรับตรวจว่า ปีของข้อมูลที่อัพโหลดมา ตรงกับปีที่เลือกไหม
+                            # df['month'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.month #สำหรับตรวจว่าข้อมูลครบทุกเดือน
+
+                            # #check ว่าปีที่เลือก กับปีในไฟล์ตรงกัน
+                            # if df[df['year'].astype(int) != int(year)].shape[0] != 0 and df[df['year'].astype(int) == int(year)].shape[0] == 0: 
+                            #     st.error(f'ข้อมูลร้านค้า {store} จาก Lazada: ปีที่เลือกคือปี {year} / แต่มีแต่ข้อมูลของปี' + ', '.join(df['year'].astype(str).unique().tolist()) + '--> อาจเลือกไฟล์ผิด', icon="🚨")
+                            #     break
+                            # else:
+                            #     if df[(df['year'].astype(int) != int(year)) & (df['month'].astype(int) != int(month))].shape[0] != 0:
+                            #         st.warning(f'ข้อมูลร้านค้า {store} จาก Lazada: ปีที่เลือกคือเดือน {month}/{year} มีข้อมูลของเดือนอื่นติดมาด้วย' + '--> กรุณาตรวจสอบ', icon="⚠️")
+
+                            #     #screen out year
+                            #     df = df[(df['year'] == int(year)) & (df['month'] == month)].reset_index(drop = True)
+
+                            #     uncompleted_order_count = len(df[df['status'] != 'confirmed']['status'].unique().tolist())
+                            #     if uncompleted_order_count != 0:
+                            #         st.warning(f"ไฟล์ของร้าน {store} (Lazada) ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
+                            #         st.dataframe(df[df['status'] != 'confirmed'])
+                            #     ##################################################################################################
+
+                            # df['createTime'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.date
+                            # df = df[['status', 'createTime', 'orderNumber', 'customerName', 'paidPrice', 'sellerDiscountTotal']]
+
+                            # sale_ls = []
+                            # for order_id in df['orderNumber'].unique():
+                            #     df1 = df[df['orderNumber'] == order_id].reset_index(drop = True)
+
+                            #     order_date = df1.loc[0, 'createTime']
+                            #     order_no = str(df1.loc[0, 'orderNumber'])
+                            #     customer_name = df1.loc[0, 'customerName']
+                            #     include_vat = df1['paidPrice'].sum()
+                            #     vat = round((include_vat * 0.07) / 1.07, 2)
+                            #     before_vat = include_vat - vat
+
+                            #     status = df1.loc[0, 'status']
+
+                            #     sale_ls.append(['Lazada', store_name, 'สินค้า', order_date, status, order_no, customer_name, before_vat, vat, include_vat])
+
+                            # lazada_sale_df_result = pd.DataFrame(sale_ls, columns = ['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat'])
+                            # lazada_sale_df_result = lazada_sale_df_result[['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat']]
+
+                            st.session_state['sale_d'][store]['Lazada'] = vat_cal_sale_lazada(store, df)
+
+                        elif '_sale_raw_file' in key and 'TikTok' in key:
+                            store = key.split('_')[0]
+                            if store not in st.session_state['sale_d'].keys():
+                                st.session_state['sale_d'][store] = {}
+
+                            df = pd.read_csv(value, converters={'Order ID':str})
+
+                            df = df[~df['Order Status'].isin(['Canceled'])]
+                            df = df[df['Order Status'] != 'Canceled'].drop_duplicates().reset_index(drop = True)
+
+                            df['year'] = pd.to_datetime(df['Created Time'], format = '%d/%m/%Y %H:%M:%S\t').dt.year #สำหรับตรวจว่า ปีของข้อมูลที่อัพโหลดมา ตรงกับปีที่เลือกไหม
+                            df['month'] = pd.to_datetime(df['Created Time'], format = '%d/%m/%Y %H:%M:%S\t').dt.month #สำหรับตรวจว่าข้อมูลครบทุกเดือน
+
+                            #check ว่าปีที่เลือก กับปีในไฟล์ตรงกัน
+                            if df[df['year'].astype(int) != int(year)].shape[0] != 0 and df[df['year'].astype(int) == int(year)].shape[0] == 0: 
+                                st.error(f'ข้อมูลร้านค้า {store} | TikTok: ปีที่เลือกคือปี {year} / แต่มีแต่ข้อมูลของปี' + ', '.join(df['year'].astype(str).unique().tolist()) + '--> อาจเลือกไฟล์ผิด', icon="🚨")
+                                break
+                            else:
+                                if df[(df['year'].astype(int) != int(year)) & (df['month'].astype(int) != int(month))].shape[0] != 0:
+                                    st.warning(f'ข้อมูลร้านค้า {store} | TikTok: ปีที่เลือกคือเดือน {month}/{year} มีข้อมูลของเดือนอื่นติดมาด้วย' + '--> กรุณาตรวจสอบ', icon="⚠️")
+
+                                #screen out year
+                                df = df[(df['year'] == int(year)) & (df['month'] == month)].reset_index(drop = True)
+
+                                uncompleted_order_count = len(df[df['Order Status'] != 'Completed']['Order Status'].unique().tolist())
+                                if uncompleted_order_count != 0:
+                                    st.warning(f"ไฟล์ของร้าน {store} (TikTok) ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
+                                    ##########
+
+
+                            df['SKU Subtotal Before Discount'] = df['SKU Subtotal Before Discount'].str.replace('THB ', '').str.replace(',', '').astype(float)
+                            df['SKU Seller Discount'] = df['SKU Seller Discount'].str.replace('THB ', '').str.replace(',', '').astype(float)
+                            df['Shipping Fee After Discount'] = df['Shipping Fee After Discount'].str.replace('THB ', '').str.replace(',', '').astype(float)
+                            df = df[['Order Status', 'Created Time', 'Order ID', 'Buyer Username', 'SKU Subtotal Before Discount', 'SKU Seller Discount',
+                                                            'Shipping Fee After Discount']]
 
                             sale_ls = []
-                            for order_id in df['หมายเลขคำสั่งซื้อ'].unique():
-                                df1 = df[df['หมายเลขคำสั่งซื้อ'] == order_id].reset_index(drop = True)
-                                order_date = df1.loc[0, 'วันที่ทำการสั่งซื้อ']
-                                order_no = df1.loc[0, 'หมายเลขคำสั่งซื้อ']
-                                customer_name = df1.loc[0, 'ชื่อผู้ใช้ (ผู้ซื้อ)']
-                                seller_discount_code = float(df1.loc[0, 'โค้ดส่วนลดชำระโดยผู้ขาย'])
-                                include_vat = df1['ราคาขายสุทธิ'].sum() - seller_discount_code
+                            for order_id in df['Order ID'].unique():
+                                df1 = df[df['Order ID'] == order_id].reset_index(drop = True)
+
+                                order_date = df1.loc[0, 'Created Time']
+                                order_no = str(df1.loc[0, 'Order ID']).replace('\t', '')
+                                customer_name = df1.loc[0, 'Buyer Username']
+                                seller_discount_code = float(df1['SKU Seller Discount'].sum())
+                                include_vat = df1['SKU Subtotal Before Discount'].sum() - seller_discount_code
                                 vat = round((include_vat * 0.07) / 1.07, 2)
                                 before_vat = include_vat - vat
-                                status = df1.loc[0, 'สถานะการสั่งซื้อ']
 
-                                sale_ls.append(['Shopee', store_name, 'สินค้า', order_date, status, order_no, customer_name, before_vat, vat, include_vat])
+                                status = df1.loc[0, 'Order Status']
 
-                                shipping_fee_from_buyer = df1.loc[0, 'ค่าจัดส่งที่ชำระโดยผู้ซื้อ']
+                                sale_ls.append(['TikTok', store_name, 'สินค้า', order_date, status, order_no, customer_name, before_vat, vat, include_vat])
+
+
+                                shipping_fee_from_buyer = df1.loc[0, 'Shipping Fee After Discount']
+
                                 if float(shipping_fee_from_buyer) != 0:
                                     shipping_vat = round((shipping_fee_from_buyer * 0.07) / 1.07, 2)
                                     shipping_before_vat = shipping_fee_from_buyer - shipping_vat
-                                    sale_ls.append(['Shopee', store_name, 'บริการ', order_date, status, order_no, customer_name, shipping_before_vat, shipping_vat, shipping_fee_from_buyer])
-
-                            shopee_sale_df_result = pd.DataFrame(sale_ls, columns = ['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat'])
-                            shopee_sale_df_result = shopee_sale_df_result[['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat']]
+                                    sale_ls.append(['TikTok', store_name, 'บริการ', order_date, status, order_no, customer_name, shipping_before_vat, shipping_vat, shipping_fee_from_buyer])
 
 
-                            sale_d[store]['shopee'] = shopee_sale_df_result
+                            tiktok_sale_df_result = pd.DataFrame(sale_ls, columns = ['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat'])
+                            tiktok_sale_df_result = tiktok_sale_df_result[['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat']]
 
-                    elif '_sale_raw_file' in key and 'Lazada' in key:
-                        store = key.split('_')[0]
-                        if store not in sale_d.keys():
-                            sale_d[store] = {}
-
-                        df = pd.read_excel(value, converters={'orderNumber':str})
-                        df = df[~df['status'].isin(['canceled', 'returned', 'Package Returned'])].drop_duplicates().reset_index(drop = True)
-
-                        df['year'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.year #สำหรับตรวจว่า ปีของข้อมูลที่อัพโหลดมา ตรงกับปีที่เลือกไหม
-                        df['month'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.month #สำหรับตรวจว่าข้อมูลครบทุกเดือน
-
-                        #check ว่าปีที่เลือก กับปีในไฟล์ตรงกัน
-                        if df[df['year'].astype(int) != int(year)].shape[0] != 0 and df[df['year'].astype(int) == int(year)].shape[0] == 0: 
-                            st.error(f'ข้อมูลร้านค้า {store} จาก Lazada: ปีที่เลือกคือปี {year} / แต่มีแต่ข้อมูลของปี' + ', '.join(df['year'].astype(str).unique().tolist()) + '--> อาจเลือกไฟล์ผิด', icon="🚨")
-                            break
-                        else:
-                            if df[(df['year'].astype(int) != int(year)) & (df['month'].astype(int) != int(month))].shape[0] != 0:
-                                st.warning(f'ข้อมูลร้านค้า {store} จาก Lazada: ปีที่เลือกคือเดือน {month}/{year} มีข้อมูลของเดือนอื่นติดมาด้วย' + '--> กรุณาตรวจสอบ', icon="⚠️")
-
-                            #screen out year
-                            df = df[(df['year'] == int(year)) & (df['month'] == month)].reset_index(drop = True)
-
-                            uncompleted_order_count = len(df[df['status'] != 'confirmed']['status'].unique().tolist())
-                            if uncompleted_order_count != 0:
-                                st.warning(f"ไฟล์ของร้าน {store} (Lazada) ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
-                                st.dataframe(df[df['status'] != 'confirmed'])
-                            ##################################################################################################
-
-                        df['createTime'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.date
-                        df = df[['status', 'createTime', 'orderNumber', 'customerName', 'paidPrice', 'sellerDiscountTotal']]
-
-                        sale_ls = []
-                        for order_id in df['orderNumber'].unique():
-                            df1 = df[df['orderNumber'] == order_id].reset_index(drop = True)
-
-                            order_date = df1.loc[0, 'createTime']
-                            order_no = str(df1.loc[0, 'orderNumber'])
-                            customer_name = df1.loc[0, 'customerName']
-                            include_vat = df1['paidPrice'].sum()
-                            vat = round((include_vat * 0.07) / 1.07, 2)
-                            before_vat = include_vat - vat
-
-                            status = df1.loc[0, 'status']
-
-                            sale_ls.append(['Lazada', store_name, 'สินค้า', order_date, status, order_no, customer_name, before_vat, vat, include_vat])
-
-                        lazada_sale_df_result = pd.DataFrame(sale_ls, columns = ['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat'])
-                        lazada_sale_df_result = lazada_sale_df_result[['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat']]
-
-                        sale_d[store]['shopee'] = lazada_sale_df_result
-
-                    elif '_sale_raw_file' in key and 'TikTok' in key:
-                        store = key.split('_')[0]
-                        if store not in sale_d.keys():
-                            sale_d[store] = {}
-
-                        df = pd.read_csv(value, converters={'Order ID':str})
-
-                        df = df[~df['Order Status'].isin(['Canceled'])]
-                        df = df[df['Order Status'] != 'Canceled'].drop_duplicates().reset_index(drop = True)
-
-                        df['year'] = pd.to_datetime(df['Created Time'], format = '%d/%m/%Y %H:%M:%S\t').dt.year #สำหรับตรวจว่า ปีของข้อมูลที่อัพโหลดมา ตรงกับปีที่เลือกไหม
-                        df['month'] = pd.to_datetime(df['Created Time'], format = '%d/%m/%Y %H:%M:%S\t').dt.month #สำหรับตรวจว่าข้อมูลครบทุกเดือน
-
-                        #check ว่าปีที่เลือก กับปีในไฟล์ตรงกัน
-                        if df[df['year'].astype(int) != int(year)].shape[0] != 0 and df[df['year'].astype(int) == int(year)].shape[0] == 0: 
-                            st.error(f'ข้อมูลร้านค้า {store} | TikTok: ปีที่เลือกคือปี {year} / แต่มีแต่ข้อมูลของปี' + ', '.join(df['year'].astype(str).unique().tolist()) + '--> อาจเลือกไฟล์ผิด', icon="🚨")
-                            break
-                        else:
-                            if df[(df['year'].astype(int) != int(year)) & (df['month'].astype(int) != int(month))].shape[0] != 0:
-                                st.warning(f'ข้อมูลร้านค้า {store} | TikTok: ปีที่เลือกคือเดือน {month}/{year} มีข้อมูลของเดือนอื่นติดมาด้วย' + '--> กรุณาตรวจสอบ', icon="⚠️")
-
-                            #screen out year
-                            df = df[(df['year'] == int(year)) & (df['month'] == month)].reset_index(drop = True)
-
-                            uncompleted_order_count = len(df[df['Order Status'] != 'Completed']['Order Status'].unique().tolist())
-                            if uncompleted_order_count != 0:
-                                st.warning(f"ไฟล์ของร้าน {store} (TikTok) ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
-                                ##########
+                            st.session_state['sale_d'][store]['TikTok'] = tiktok_sale_df_result
 
 
-                        df['SKU Subtotal Before Discount'] = df['SKU Subtotal Before Discount'].str.replace('THB ', '').str.replace(',', '').astype(float)
-                        df['SKU Seller Discount'] = df['SKU Seller Discount'].str.replace('THB ', '').str.replace(',', '').astype(float)
-                        df['Shipping Fee After Discount'] = df['Shipping Fee After Discount'].str.replace('THB ', '').str.replace(',', '').astype(float)
-                        df = df[['Order Status', 'Created Time', 'Order ID', 'Buyer Username', 'SKU Subtotal Before Discount', 'SKU Seller Discount',
-                                                        'Shipping Fee After Discount']]
+                        ############## sale ##############
+                        if '_commission_raw_file' in key and 'Shopee' in key:
+                            # ls = []
+                            # pdf_ls = []
+                            store = key.split('_')[0]
 
-                        sale_ls = []
-                        for order_id in df['Order ID'].unique():
-                            df1 = df[df['Order ID'] == order_id].reset_index(drop = True)
+                            if store not in st.session_state['commission_d'].keys():
+                                st.session_state['commission_d'][store] = {}
 
-                            order_date = df1.loc[0, 'Created Time']
-                            order_no = str(df1.loc[0, 'Order ID']).replace('\t', '')
-                            customer_name = df1.loc[0, 'Buyer Username']
-                            seller_discount_code = float(df1['SKU Seller Discount'].sum())
-                            include_vat = df1['SKU Subtotal Before Discount'].sum() - seller_discount_code
-                            vat = round((include_vat * 0.07) / 1.07, 2)
-                            before_vat = include_vat - vat
+                            # with zipfile.ZipFile(value, 'r') as z:
+                            #     sorted_file_ls = ['-'.join(ls) for ls in sorted([n.split('-') for n in z.namelist() if 'SPX' not in n], key = lambda x: int(x[4]))]
+                            #     progress_bar = st.progress(0, text = 'processing shopee commission pdf')
+                                
+                            #     for i, file_name in enumerate(sorted_file_ls):
+                            #         if 'SPX' in file_name:
+                            #             progress_bar.progress((i + 1) / len(sorted_file_ls), text='reading shopee commission pdf files')
+                            #         else:
+                            #             pdf_file = pypdf.PdfReader(BytesIO(z.read(file_name)))
 
-                            status = df1.loc[0, 'Order Status']
+                            #             doc_date, doc_num, issued_company, before_vat, vat, company_name, company_tax_id = None, None, None, None, None, None, None
+                            #             # st.write(pdf_file.pages[0].extract_text().split('\n'))
+                            #             # break
+                            #             for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
+                            #                 if 'วันที่' in text and 'ภายในวันที่' not in text:
+                            #                     doc_date = pd.to_datetime(text.split(' ')[-1], format = '%d/%m/%Y').date()
+                            #                 elif 'Co.,' in text:
+                            #                     issued_company = text
+                            #                 elif 'เลขที่' in text:
+                            #                     # st.write(text)
+                            #                     doc_num = text.split('No. ')[-1] + ' ' + pdf_file.pages[0].extract_text().split('\n')[j + 1]
+                            #                 elif 'เลขประจำตัวผู้เสียภาษี' in text:
+                            #                     company_tax_id = text.split('Tax ID ')[-1].split('เลขที่/')[0]
+                            #                 elif 'after discount' in text:
+                            #                     before_vat = round(float(text.split(' ')[-1].replace(',', '')), 2)
+                            #                 elif 'VAT' in text and '7%' in text:
+                            #                     vat = round(float(text.split(' ')[-1].replace(',', '')), 2)
+                            #                 elif 'Customer name' in text:
+                            #                     company_name = text.split('Customer name ')[-1]
+                                                        
+                            #         if None in [doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat]:
+                            #             st.error(f'something wrong with {store} Shopee commission file: {file_name}', icon="🚨")
+                            #             break
+                            #         else:
+                            #             ls.append([doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
+                            #             pdf_ls.append([company_name, 'Shopee', company_tax_id, doc_date, BytesIO(z.read(file_name))])
+                            #             progress_bar.progress((i + 1) / len(sorted_file_ls), text = f'reading {store} Shopee commission files')
 
-                            sale_ls.append(['TikTok', store_name, 'สินค้า', order_date, status, order_no, customer_name, before_vat, vat, include_vat])
+                            # st.session_state['commission_d'][store]['Shopee'] = {
+                            #     'commission_df': pd.DataFrame(ls, columns = ['doc_date', 'company_name', 'company_tax_id', 'issue_comapny', 'doc_num', 'before_vat', 'vat']), 
+                            #     'pdf_df': pd.DataFrame(pdf_ls, columns = ['company_name', 'platform', 'company_tax_id', 'doc_date', 'pdf_file'])
+                            # }
+                            st.session_state['commission_d'][store]['Shopee'] = vat_cal_commission_shopee(store, value)
+                            # progress_bar.empty()
 
 
-                            shipping_fee_from_buyer = df1.loc[0, 'Shipping Fee After Discount']
+                        elif '_commission_raw_file' in key and 'Lazada' in key:
+                            # ls = []
+                            # pdf_ls = []
+                            store = key.split('_')[0]
+                            # doc_num_ls = []
 
-                            if float(shipping_fee_from_buyer) != 0:
-                                shipping_vat = round((shipping_fee_from_buyer * 0.07) / 1.07, 2)
-                                shipping_before_vat = shipping_fee_from_buyer - shipping_vat
-                                sale_ls.append(['TikTok', store_name, 'บริการ', order_date, status, order_no, customer_name, shipping_before_vat, shipping_vat, shipping_fee_from_buyer])
+                            if store not in st.session_state['commission_d'].keys():
+                                st.session_state['commission_d'][store] = {}
+
+                            # progress_bar = st.progress(0, text = 'processing Lazada commission pdf')
+                            # for file_order, file_name in enumerate(lazada_commission_files):
+                            #     pdf_file = pypdf.PdfReader(file_name)
 
 
-                        tiktok_sale_df_result = pd.DataFrame(sale_ls, columns = ['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat'])
-                        tiktok_sale_df_result = tiktok_sale_df_result[['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat']]
+                            #     if 'Lazada Express Limited' in pdf_file.pages[0].extract_text() or 'Shipping Fee' in pdf_file.pages[0].extract_text():
+                            #         progress_bar.progress((i + 1) / len(lazada_commission_files), text = 'reading Lazada commission pdf files')
+                            #     # elif doc_num in doc_num_ls: #ไฟล์ที่อ่าน มีเลขเอกสารซ้ำ น่าจะเพราะอัพโหลดมาซ้ำ
+                            #     #     progress_bar.progress((file_order + 1) / len(lazada_commission_files), text = 'reading Lazada commission pdf files')
+                            #     else: 
+                            #         doc_date, doc_num, issued_company, before_vat, vat, company_name, company_tax_id = None, None, None, None, None, None, None
 
-                        sale_d[store]['TikTok'] = tiktok_sale_df_result
+                            #         #มีคำว่า 'TAX INVOICE / RECEIPT'
+                            #         if 'TAX INVOICE / RECEIPT' in pdf_file.pages[0].extract_text():
+                            #             # st.write(pdf_file.pages[0].extract_text().split('\n'))
+                            #             for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
+                            #                 if 'Invoice Date' in text:
+                            #                     doc_date = pd.to_datetime(text.split(': ')[-1], format = '%Y-%m-%d').date()
+                            #                 elif 'Lazada' in text:
+                            #                     issued_company = text
+                            #                 elif 'Total' in text and '(Including Tax)' not in text:
+                            #                     before_vat = float(text.split(' ')[-1].replace(',', ''))
+                            #                 elif '7% (VAT)' in text:
+                            #                     vat = float(text.split(') ')[-1].replace(',', ''))
+                            #                 elif 'Invoice No.:' in text:
+                            #                     doc_num = text.split(' ')[-1]
+                            #                 elif 'TAX INVOICE / RECEIPT' in text:
+                            #                     company_name = pdf_file.pages[0].extract_text().split('\n')[j + 2]
+                            #                     company_tax_id = pdf_file.pages[0].extract_text().split('\n')[j + 7].split('Tax ID: ')[-1].split('Invoice')[0]
 
-                    ############## sale ##############
-                    if '_commission_raw_file' in key and 'Shopee' in key:
-                        ls = []
-                        pdf_ls = []
-                        store = key.split('_')[0]
+                            #                 # break
+                                    
+                            #         #กรณีอื่น --> ตอนนี้ที่เจอคือ ใบคืนเงิน
+                            #         elif 'CREDIT NOTE' in pdf_file.pages[0].extract_text() and 'Reversal Commission' in pdf_file.pages[0].extract_text():
+                            #             # st.write(pdf_file.pages[0].extract_text().split('\n'))
+                            #             for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
+                            #                 if 'Date: ' in text:
+                            #                     doc_date = pd.to_datetime(text.split(': ')[-1], format = '%Y-%m-%d').date()
+                            #                 elif 'Lazada' in text:
+                            #                     issued_company = text
+                            #                 elif 'Total' in text and '(Including Tax)' not in text:
+                            #                     before_vat = float(text.split(' ')[-1].replace(',', '')) * -1
+                            #                 elif '7% (VAT)' in text:
+                            #                     vat = float(text.split(') ')[-1].replace(',', '')) * -1
+                            #                 elif 'CREDIT NOTE' in text:
+                            #                     company_name = pdf_file.pages[0].extract_text().split('\n')[j + 2].replace('  ', ' ')
+                            #                     company_tax_id = pdf_file.pages[0].extract_text().split('\n')[j + 7].split('Tax ID: ')[-1]
+                            #                 elif 'Credit Note: ' in text:
+                            #                     doc_num = text.split('Credit Note: ')[-1]
+                                            
 
-                        if store not in commission_d.keys():
-                            commission_d[store] = {}
+                            #         if None in [doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat]:
+                            #             st.error(f'something wrong with {store} Lazada commission file: {file_name}', icon="🚨")
+                            #             # st.write([doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
+                            #             break
+                            #         else:
+                            #             ls.append([doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
+                            #             pdf_ls.append([company_name, 'Lazada', company_tax_id, doc_date, file_name])
+                            #             doc_num_ls.append(doc_num) #เอามากัน กรณีคนอัพโหลดไฟล์มาซ้ำ
+                            #             progress_bar.progress((i + 1) / len(lazada_commission_files), text = f'reading {store} Shopee commission files')
 
-                        with zipfile.ZipFile(value, 'r') as z:
-                            sorted_file_ls = ['-'.join(ls) for ls in sorted([n.split('-') for n in z.namelist() if 'SPX' not in n], key = lambda x: int(x[4]))]
-                            progress_bar = st.progress(0, text = 'processing shopee commission pdf')
+                            st.session_state['commission_d'][store]['Lazada'] = vat_cal_commission_lazada(store, value)
+
                             
-                            for i, file_name in enumerate(sorted_file_ls):
-                                if 'SPX' in file_name:
-                                    progress_bar.progress((i + 1) / len(sorted_file_ls), text='reading shopee commission pdf files')
-                                else:
-                                    pdf_file = pypdf.PdfReader(BytesIO(z.read(file_name)))
 
-                                    doc_date, doc_num, issued_company, before_vat, vat, company_name, company_tax_id = None, None, None, None, None, None, None
-                                    for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
-                                        if 'วันที่' in text and 'ภายในวันที่' not in text:
-                                            doc_date = pd.to_datetime(text.split(' ')[-1], format = '%d/%m/%Y').date()
-                                        elif 'Co.,' in text:
-                                            issued_company = text
-                                        elif 'เลขที่' in text:
-                                            doc_num = text.split('No. ')[-1] + ' ' + pdf_file.pages[0].extract_text().split('\n')[j + 1]
-                                            company_tax_id = text.split('Tax ID ')[-1].split('เลขที่/')[0]
-                                        elif 'after discount' in text:
-                                            before_vat = round(float(text.split(' ')[-1].replace(',', '')), 2)
-                                        elif 'VAT' in text and '7%' in text:
-                                            vat = round(float(text.split(' ')[-1].replace(',', '')), 2)
-                                        elif 'Customer name' in text:
-                                            company_name = text.split('Customer name ')[-1]
-                                                    
-                                if None in [doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat]:
-                                    st.error(f'something wrong with {store} Shopee commission file: {file_name}', icon="🚨")
-                                    break
-                                else:
-                                    ls.append([doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
-                                    pdf_ls.append([company_name, 'Shopee', doc_date, BytesIO(z.read(file_name))])
-                                    progress_bar.progress((i + 1) / len(sorted_file_ls), text = f'reading {store} Shopee commission files')
+                        elif '_commission_raw_file' in key and 'TikTok' in key:
+                            # ls = []
+                            # pdf_ls = []
+                            store = key.split('_')[0]
 
-                        commission_d[store]['shopee'] = {
-                            'commission_df': pd.DataFrame(ls, columns = ['doc_date', 'company_name', 'company_tax_id', 'issue_comapny', 'doc_num', 'before_vat', 'vat']), 
-                            'pdf_df': pd.DataFrame(pdf_ls, columns = ['company_name', 'platform', 'doc_date', 'pdf_file'])
-                        }
-                        progress_bar.empty()
+                            if store not in st.session_state['commission_d'].keys():
+                                st.session_state['commission_d'][store] = {}
 
+                            # progress_bar = st.progress(0, text = 'processing TikTok commission pdf')
+                            # with zipfile.ZipFile(value,'r') as z:
+                            #     sorted_file_ls = sorted([n for n in z.namelist() if 'THJV' not in n and 'TTSTHAC' not in n])
+                            #     progress_bar = st.progress(0, text = 'processing tiktok commission pdf')
 
-                    elif '_commission_raw_file' in key and 'Lazada' in key:
-                        ls = []
-                        pdf_ls = []
-                        store = key.split('_')[0]
-                        doc_num_ls = []
+                            #     for i, file_name in enumerate(sorted_file_ls):
+                            #         if 'THJV' in file_name or 'TTSTHAC' in file_name:
+                            #             progress_bar.progress((i + 1) / len(sorted_file_ls), text='reading tiktok commission pdf files')
+                            #         else:
+                            #             # pdf_file = pypdf.PdfReader(BytesIO(z.read(file_name)))
+                            #             pdf_file = pypdf.PdfReader(BytesIO(z.read(file_name)))
+                            #             doc_date, doc_num, issued_company, before_vat, vat, company_name, company_tax_id = None, None, None, None, None, None, None
+                            #             for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
+                            #                 if 'Invoice date' in text:
+                            #                     doc_date = pd.to_datetime(text.split(' : ')[-1], format = '%b %d, %Y').date()
+                            #                 elif 'Ltd.' in text and 'prepared by' not in text and 'For corporate' not in text:
+                            #                     issued_company = text
+                            #                 elif 'Invoice number : ' in text:
+                            #                     doc_num = text.split('Invoice number : ')[-1]
+                            #                 elif 'Subtotal (excluding VAT)' in text:
+                            #                     before_vat = float(text.split(' ')[-1].replace(',', '').replace('฿', ''))
+                            #                 elif 'Total VAT' in text and '7%' in text:
+                            #                     vat = float(text.split(' ')[-1].replace(',', '').replace('฿', '')) 
+                            #                 elif 'Client Name' in text:
+                            #                     company_name = text.split('Client Name: ')[-1]
+                            #                 elif 'Tax ID:' in text:
+                            #                     company_tax_id = text.split(': ')[-1]
 
-                        if store not in commission_d.keys():
-                            commission_d[store] = {}
-
-                        progress_bar = st.progress(0, text = 'processing Lazada commission pdf')
-                        for file_order, file_name in enumerate(lazada_commission_files):
-                            pdf_file = pypdf.PdfReader(file_name)
-
-
-                            if 'Lazada Express Limited' in pdf_file.pages[0].extract_text() or 'Shipping Fee' in pdf_file.pages[0].extract_text():
-                                progress_bar.progress((i + 1) / len(lazada_commission_files), text = 'reading Lazada commission pdf files')
-                            elif doc_num in doc_num_ls: #ไฟล์ที่อ่าน มีเลขเอกสารซ้ำ น่าจะเพราะอัพโหลดมาซ้ำ
-                                progress_bar.progress((file_order + 1) / len(lazada_commission_files), text = 'reading Lazada commission pdf files')
-                            else:
-                                doc_date, doc_num, issued_company, before_vat, vat, company_name, company_tax_id = None, None, None, None, None, None, None
-                                for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
-                                    if 'Invoice Date' in text:
-                                        doc_date = pd.to_datetime(text.split(': ')[-1], format = '%Y-%m-%d').date()
-                                    elif 'Lazada' in text:
-                                        issued_company = text
-                                    elif 'Total' in text and '(Including Tax)' not in text:
-                                        before_vat = float(text.split(' ')[-1].replace(',', ''))
-                                    elif '7% (VAT)' in text:
-                                        vat = float(text.split(') ')[-1].replace(',', ''))
-                                    elif 'Invoice No.:' in text:
-                                        doc_num = text.split(' ')[-1]
-                                    elif 'TAX INVOICE / RECEIPT' in text:
-                                        company_name = pdf_file.pages[0].extract_text().split('\n')[i + 2].replace('  ', ' ')
-                                        company_tax_id = pdf_file.pages[0].extract_text().split('\n')[i + 7].split('Tax ID: ')[-1].split('Invoice')[0]
-
-                                if None in [doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat]:
-                                    st.error(f'something wrong with {store} Lazada commission file: {file_name}', icon="🚨")
-                                    break
-                                else:
-                                    ls.append([doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
-                                    pdf_ls.append([company_name, 'Lazada', doc_date, pdf_file])
-                                    doc_num_ls.append(doc_num) #เอามากัน กรณีคนอัพโหลดไฟล์มาซ้ำ
-                                    progress_bar.progress((i + 1) / len(lazada_commission_files), text = f'reading {store} Shopee commission files')
-
-                        commission_d[store]['lazada'] = {
-                            'commission_df': pd.DataFrame(ls, columns = ['doc_date', 'company_name', 'company_tax_id', 'issue_comapny', 'doc_num', 'before_vat', 'vat']), 
-                            'pdf_df': pd.DataFrame(pdf_ls, columns = ['company_name', 'platform', 'doc_date', 'pdf_file'])
-                        }
-                        progress_bar.empty()
-                        
-
-                    elif '_commission_raw_file' in key and 'TikTok' in key:
-                        ls = []
-                        pdf_ls = []
-                        store = key.split('_')[0]
-
-                        if store not in commission_d.keys():
-                            commission_d[store] = {}
-
-                        progress_bar = st.progress(0, text = 'processing TikTok commission pdf')
-                        with zipfile.ZipFile(value,'r') as z:
-                            sorted_file_ls = sorted([n for n in z.namelist() if 'THJV' not in n and 'TTSTHAC' not in n])
-                            progress_bar = st.progress(0, text = 'processing tiktok commission pdf')
-
-                            for i, file_name in enumerate(sorted_file_ls):
-                                if 'THJV' in file_name or 'TTSTHAC' in file_name:
-                                    progress_bar.progress((i + 1) / len(sorted_file_ls), text='reading tiktok commission pdf files')
-                                else:
-                                    pdf_file = pypdf.PdfReader(BytesIO(z.read(file_name)))
-                                    doc_date, doc_num, issued_company, before_vat, vat, company_name, company_tax_id = None, None, None, None, None, None, None
-                                    for j, text in enumerate(pdf_file.pages[0].extract_text().split('\n')):
-                                        if 'Invoice date' in text:
-                                            doc_date = pd.to_datetime(text.split(' : ')[-1], format = '%b %d, %Y').date()
-                                        elif 'Ltd.' in text and 'prepared by' not in text and 'For corporate' not in text:
-                                            issued_company = text
-                                        elif 'Invoice number : ' in text:
-                                            doc_num = text.split('Invoice number : ')[-1]
-                                        elif 'Subtotal (excluding VAT)' in text:
-                                            before_vat = float(text.split(' ')[-1].replace(',', '').replace('฿', ''))
-                                        elif 'Total VAT' in text and '7%' in text:
-                                            vat = float(text.split(' ')[-1].replace(',', '').replace('฿', '')) 
-                                        elif 'Client Name' in text:
-                                            company_name = text.split('Client Name: ')[-1]
-                                        elif 'Tax ID:' in text:
-                                            company_tax_id = text.split(': ')[-1]
-
-                                    if None in [doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat]:
-                                        st.error(f'something wrong with {store} TikTok commission file: {file_name}', icon="🚨")
-                                        break
-                                    else:
-                                        ls.append([doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
-                                        pdf_ls.append([company_name, 'TikTok', doc_date, pdf_file])
-                                        progress_bar.progress((i + 1) / len(sorted_file_ls), text = f'reading {store} Shopee commission files')
-                            
-                            commission_d[store]['tiktok'] = {
-                                    'commission_df': pd.DataFrame(ls, columns = ['doc_date', 'company_name', 'company_tax_id', 'issue_comapny', 'doc_num', 'before_vat', 'vat']), 
-                                    'pdf_df': pd.DataFrame(pdf_ls, columns = ['company_name', 'platform', 'doc_date', 'pdf_file'])
-                                }
-                            progress_bar.empty()
+                            #             if None in [doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat]:
+                            #                 st.error(f'something wrong with {store} TikTok commission file: {file_name}', icon="🚨")
+                            #                 break
+                            #             else:
+                            #                 ls.append([doc_date, company_name, company_tax_id, issued_company, doc_num, before_vat, vat])
+                            #                 pdf_ls.append([company_name, 'TikTok', company_tax_id, doc_date, BytesIO(z.read(file_name))])
+                            #                 progress_bar.progress((i + 1) / len(sorted_file_ls), text = f'reading {store} Shopee commission files')
+                            st.session_state['commission_d'][store]['TikTok'] = vat_cal_commission_tiktok(store, value)
+                                # st.dataframe(pd.DataFrame(ls, columns = ['doc_date', 'company_name', 'company_tax_id', 'issue_comapny', 'doc_num', 'before_vat', 'vat']))
+                                # progress_bar.empty()
 
                 ############## merge data ##############  
+                unupload_sale_ls = []
+                unupload_commission_ls = []
+                for key in {key: value for key, value in st.session_state.items() if 'tick' in key and value == True}.keys():
+                    store = key.split('_')[1]
+                    platform = key.split('_')[-1]
+                    # st.write(store, platform)
+                    if st.session_state[f'{store}_{platform}_sale_raw_file'] == None or st.session_state[f'{store}_{platform}_sale_raw_file'] == []:
+                        # st.write(st.session_state['sale_d'][store][platform])
+                        # if st.session_state['sale_d'][store][platform].empty:
+                        unupload_sale_ls.append(f'{store} {platform}')
+                        # st.write('aaa')
+                    if st.session_state[f'{store}_{platform}_commission_raw_file'] == None or st.session_state[f'{store}_{platform}_commission_raw_file'] == []:
+                        if st.session_state['commission_d'][store][platform]['commission_df'].empty:
+                            unupload_commission_ls.append(f'{store} {platform}')
+                            # st.write('bbb')
+
+                if unupload_sale_ls != []:
+                    st.warning(f'ไม่มีการอัพโหลดข้อมูลยอดขายของร้าน {", ".join(unupload_sale_ls)} --> กรูณาตรวจเช็คความถูกต้อง', icon="⚠️")
+                    st.write(unupload_sale_ls)
+                if unupload_commission_ls != []:
+                    st.warning(f'ไม่มีการอัพโหลดข้อมูลใบเสร็จค่าธรรมเนียมของร้าน {", ".join(unupload_commission_ls)} --> กรูณาตรวจเช็คความถูกต้อง', icon="⚠️")
+
+                # st.write(st.session_state)
                 sale_df = pd.DataFrame()
+                # st.write(st.session_state)
                 for store in store_name_ls:
-                    for platform in ['shopee', 'lazada', 'tiktok']:
-                        if platform in sale_d[store].keys():
-                            sale_df = pd.concat([sale_df, sale_d[store][platform]])
+                    # st.write(store)
+                    for platform in ['Shopee', 'Lazada', 'TikTok']:
+                        if store in st.session_state['sale_d'].keys():
+                            if platform in st.session_state['sale_d'][store].keys() and st.session_state[f'tick_{store}_{platform}']:
+                                sale_df = pd.concat([sale_df, st.session_state['sale_d'][store][platform]])
 
-                
+                # st.dataframe(sale_df)
+
                 commission_df = pd.DataFrame()
+                pdf_df = pd.DataFrame()
                 for store in store_name_ls:
-                    for platform in ['shopee', 'lazada', 'tiktok']:
-                        if platform in commission_d[store].keys():
-                            commission_df = pd.concat([commission_df, commission_d[store][platform]['commission_df']])
-                st.dataframe(commission_df)
+                    for platform in ['Shopee', 'Lazada', 'TikTok']:
+                        if platform in st.session_state['commission_d'][store].keys() and st.session_state[f'tick_{store}_{platform}']:
+                            # st.write(st.session_state['commission_d'][store][platform]['commission_df'])
+                            commission_df = pd.concat([commission_df, st.session_state['commission_d'][store][platform]['commission_df']], axis = 0).reset_index(drop = True)
+                            pdf_df = pd.concat([pdf_df, st.session_state['commission_d'][store][platform]['pdf_df']], axis = 0).reset_index(drop = True)
 
 
+                #split df
+                # st.dataframe(commission_df)
                 if len(commission_df['company_tax_id'].str.lower().str.replace(' ', '').unique()) >= 2:
                     st.subheader('5. check')
-                    st.warning('เจอชื่อ บ ในใบเสร็จ มากกว่า 1 ชื่อ --> กรุณาเลือกชื่อผู้จ่าย vat ที่ถูกต้อง', icon="⚠️")
+                    st.warning('เจอชื่อ บ ในใบเสร็จ มากกว่า 1 ชื่อ --> กรุณาเลือกชื่อผู้จ่าย VAT ที่ถูกต้อง', icon="⚠️")
+
+                    unique_company_tax_id = commission_df['company_tax_id'].str.replace(' ', '').unique().tolist()
+
+                    # st.write(unique_company_tax_id)
+                    for tax_id in unique_company_tax_id:
+                        # Create a section for each unique name
+                        name = commission_df[commission_df['company_tax_id'] == tax_id]['company_name'].tolist()[0]
+                        checkbox_key = f"checkbox_{tax_id}"
+                        is_checked = st.checkbox(name, key = checkbox_key)
+
+                        # Update the set of selected names based on the checkbox state
+                        if is_checked:
+                            st.session_state.selected_names.add(tax_id)
+                        else:
+                            st.session_state.selected_names.discard(tax_id)
+
+                        # Show filtered dataframe for the name
+                        # st.write(st.session_state.selected_names)
+                        filtered_commission_df = commission_df[commission_df["company_tax_id"] == tax_id]
+                        filtered_pdf_df = pdf_df[pdf_df['company_tax_id']== tax_id]
+                        # st.dataframe(filtered_pdf_df)
+                        st.dataframe(filtered_commission_df)
+                    
+
+                    
+                    # if 'tick_done' not in st.session_state:
+                    #     st.session_state['tick_done'] = False
 
 
-                    for i, tax_id in enumerate(commission_df['company_tax_id'].str.replace(' ', '').unique().tolist()):
-                        # show_name = commission_df[commission_df['company_name1'] == name]['company_name'].tolist()[0]
-                        name = commission_df[commission_df['company_tax_id'].str.replace(' ', '') == tax_id].reset_index(drop = True).loc[0, 'company_name']
-                        st.checkbox(label=f'{name}', key = f'tax_id_{tax_id}')
-                        st.write(st.session_state)
-                        st.dataframe(commission_df[commission_df['company_tax_id'] == tax_id])
 
-                    commission_df1 = pd.DataFrame()
-                    for i, tax_id in enumerate([key for key in st.session_state.keys() if 'tax_id' in key]):
-                        if st.session_state[f'tax_id_{tax_id}']:
-                            commission_df1 = pd.concat([commission_df1, commission_df[commission_df['company_tax_id'] == tax_id]], axis = 0).reset_index(drop = True)
+                    # st.dataframe(commission_df)
+                    # for i, tax_id in enumerate(commission_df['company_tax_id'].str.replace(' ', '').unique().tolist()):
+                    #     tax_id = commission_df[commission_df['company_tax_id'].str.replace(' ', '') == name]['tax_id'].tolist()[0]
+                    #     if f'tick_{tax_id}' not in st.session_state:
+                    #         st.session_state[f'tick_{tax_id}'] = commission_df[commission_df['company_tax_id'].str.replace(' ', '') == tax_id]
+                    #         st.session_state['']
 
+                        # name = commission_df[commission_df['company_tax_id'].str.replace(' ', '') == tax_id].reset_index(drop = True).loc[0, 'company_name']
+                        # if f'tax_id_{tax_id}' not in st.session_state:
+                        #     st.checkbox(label=f'{name}', key = f'tick_{tax_id}')
+                        #     # st.write(st.session_state)
+                        #     st.dataframe(commission_df[commission_df['company_tax_id'] == tax_id])
+                        # else:
+                        #     st.dataframe(commission_df[commission_df['company_tax_id'] == tax_id])
+
+                    # commission_df1 = pd.DataFrame()
+                    # st.write([key for key in st.session_state.keys() if 'tax_id' in key])
+                    # for i, tax_id in enumerate([key for key in st.session_state.keys() if 'tax_id' in key]):
+                    #     if st.session_state[tax_id]:
+                            
+                    #         # commission_df1 = pd.concat([commission_df1, ], axis = 0).reset_index(drop = True)
+                    #         st.session_state[tax_id] = commission_df[commission_df['company_tax_id'] == tax_id.replace('tax_id_', '')]
+                    #         st.dataframe(commission_df[commission_df['company_tax_id'] == tax_id.replace('tax_id_', '')])
                     # commission_df = commission_df1
 
-                    if st.button('finish ticking'):
-                        ready_to_download = True
-                    else:
-                        ready_to_download = False
+                    finish_tick_col1, finish_tick_col2, finish_tick_col3 = st.columns([2, 1, 2])
+                    with finish_tick_col2:
+                        if st.button('finish ticking', use_container_width=True):
+                            ready_to_download = True
+                            commission_df1 = pd.concat(
+                                                [commission_df[commission_df["company_tax_id"] == name].sort_values(by = ['doc_date', 'doc_num'], ascending = [True, True]) for name in st.session_state.selected_names]
+                                            )
+                            pdf_df1 = pd.concat(
+                                                [pdf_df[pdf_df["company_tax_id"] == name] for name in st.session_state.selected_names]
+                                            )
+                            st.divider()
+                        else:
+                            ready_to_download = False
 
 
                 else:
                     ready_to_download = True
+                    commission_df1 = commission_df.sort_values(by = ['doc_date', 'doc_num'], ascending = [True, True]).reset_index(drop=True)
+                    pdf_df1 = pdf_df
                     st.divider()
 
-                
+                # st.dataframe(sale_df)
                 if ready_to_download:
-                    st.write(f'ภาษีมูลค่าเพิ่มขาย = {sale_df["vat"].sum()}')
-                    st.write(f'ภาษีมูลค่าเพิ่มซื้อ = {commission_df["vat"].sum()}')
-                    st.write(f'ภาษีมูลค่าเพิ่มที่ต้องจ่ายสรรพากร = {sale_df["vat"].sum() - commission_df["vat"].sum()}')
+                    # st.dataframe(sale_df)
+                    st.write(f'ภาษีมูลค่าเพิ่มขาย = {"{:,.2f}".format(sale_df["vat"].sum())}')
+                    # st.dataframe(commission_df1)
+                    st.write(f'ภาษีมูลค่าเพิ่มซื้อ = {"{:,.2f}".format(commission_df1["vat"].sum())}')
+                    # st.write('total vat')
+                    st.write(f'ภาษีมูลค่าเพิ่มที่ต้องจ่ายสรรพากร = {"{:,.2f}".format(sale_df["vat"].sum() - commission_df1["vat"].sum())}')
+
+                    # st.write(st.session_state)
+
+                    # st.dataframe(pdf_df1[[c for c in pdf_df1.columns if c != 'pdf_file']])
                     
                     merged_pdf_d = {}
-                    for store, d1 in commission_d.items():
-                        for platform, d2 in d1.items():
-                            pdf_df = d2['pdf_df'].sort_values(by = 'doc_date', ascending = True).reset_index(drop = True)
+                    for store in pdf_df1['store_name'].unique():
+                        df1 = pdf_df1[pdf_df1['store_name'] == store].reset_index(drop = True)
+                        for platform in df1['platform'].unique():
+                            df2 = df1[df1['platform'] == platform].reset_index(drop = True)
 
+                            
                             merger = PdfMerger()
+                            for pdf in pdf_df1.sort_values(by = 'doc_date', ascending = True)['pdf_file']:
+                        # for platform, d2 in d1.items():
+                        #     pdf_df = d2['pdf_df'].sort_values(by = 'doc_date', ascending = True).reset_index(drop = True)
+                        # st.dataframe(pdf_df)
 
-                            for i in range(pdf_df.shape[0]):
-                                merger.append(pdf_df.loc[i, 'pdf_file'])
+                        # for f in pdf_df['pdf_file'].tolist():
+                                merger.append(pdf)
 
                             merged_pdf = BytesIO()
                             merger.write(merged_pdf)
@@ -1075,11 +1574,11 @@ elif sidebar_radio == 'คำนวณ VAT':
                             merged_pdf.seek(0)
 
                             merged_pdf_d[f'{store}_{platform}_commission_receipt'] = merged_pdf
-                
+                        
                     buffer = BytesIO()
                     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
                         
-                        for i, df in enumerate([sale_df, commission_df]):
+                        for i, df in enumerate([sale_df, commission_df1]):
                             excel_buffer = BytesIO()
                             with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
                                 df.to_excel(writer, index=False, sheet_name="Sheet1")
@@ -1090,17 +1589,20 @@ elif sidebar_radio == 'คำนวณ VAT':
                         for key, value in merged_pdf_d.items():
                             zipf.writestr(f"{key}.pdf", value.read())
 
-                    
-                    st.download_button(
-                                label = "download final file",
-                                data = buffer,
-                                file_name = f"ยอดคำนวณยื่นvat_{month}{year}.zip",
-                                mime = "application/zip",
-                                key="download_vat_button" 
-                        )
+                    download_col1, download_col2, doanload_col3 = st.columns([2, 1, 2])
+                    with download_col2:
+                        st.download_button(
+                                    label = "download final file",
+                                    data = buffer,
+                                    file_name = f"ยอดคำนวณยื่นvat_{month}{year}.zip",
+                                    mime = "application/zip",
+                                    key="download_vat_button", 
+                                    use_container_width=True
+                            )
                             
 
-
+    else:
+        st.write('กรุณาใส่ชื่อร้านค้าที่ tab ด้านซ้าย')
     
 elif sidebar_radio == 'วิธีใช้':
     pass
