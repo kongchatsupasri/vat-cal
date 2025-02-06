@@ -3,3 +3,5 @@ xlsxwriter
 PyPDF2
 pypdf
 openpyxl
+streamlit-authenticator
+google-auth-oauthlib
