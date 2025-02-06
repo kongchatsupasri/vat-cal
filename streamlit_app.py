@@ -42,6 +42,31 @@ def login_with_google():
 # Call login function in Streamlit
 login_with_google()
 
+def verify_google_token(token):
+    try:
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), CLIENT_ID)
+        return idinfo  # Returns user info (email, name, etc.)
+    except ValueError:
+        return None
+
+# Check if user is logged in
+if 'user' not in st.session_state:
+    st.session_state.user = None
+
+if st.query_params.get("token"):
+    user_info = verify_google_token(st.query_params["token"])
+    if user_info:
+        st.session_state.user = user_info
+        st.success(f"Welcome, {user_info['name']}! 🎉")
+    else:
+        st.error("Google authentication failed.")
+
+# If logged in, display content
+if st.session_state.user:
+    st.write("You are now logged in!")
+    st.write(f"Email: {st.session_state.user['email']}")
+    
+
 #%% function for page 'คำนวณ vat'
 @st.cache_data(show_spinner=False)
 def vat_cal_sale_shopee(store, df):
