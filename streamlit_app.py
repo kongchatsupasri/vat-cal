@@ -58,7 +58,7 @@ if 'user' not in st.session_state:
     st.session_state.user = None
 
 # Fetch token from URL query params
-query_params = st.experimental_get_query_params()
+query_params = st.query_params()
 token = query_params.get("token", [None])[0]
 
 if token:
