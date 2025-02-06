@@ -417,7 +417,7 @@ def vat_cal_commission_tiktok(store_name, zip_file):
         
         progress_bar.empty()
 #%% sidebar
-st.set_page_config(layout="wide")
+# st.set_page_config(layout="wide")
 
 with st.sidebar:
     st.subheader('เลือกจำนวนร้านค้าที่คุณมี')
