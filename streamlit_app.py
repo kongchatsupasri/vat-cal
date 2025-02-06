@@ -17,47 +17,43 @@ import json
 # Load client ID from Google credentials JSON file
 CLIENT_ID = "528072291091-3nigo5rv42k4lpbuekmv8s9l0lv6i7k5.apps.googleusercontent.com"
 
-st.set_page_config(page_title="Login", page_icon="🔐")
+# Get Streamlit Cloud URL
+STREAMLIT_URL = "https://your-app-name.streamlit.app/"
 
-def login_with_google():
-    """Display Google Sign-In button and authenticate user."""
-    st.subheader("Login with Google")
+# Initialize session state
+if "user" not in st.session_state:
+    st.session_state.user = None
 
-    # Frontend: Google Sign-In Button
-    google_button = """
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <div id="g_id_onload"
-        data-client_id="{client_id}"
-        data-callback="onSignIn"
-        data-auto_prompt="false">
-    </div>
-    <div class="g_id_signin" data-type="standard"></div>
-
-    <script>
-        function onSignIn(response) {{
-            fetch("/?token=" + response.credential)
-            .then(response => response.json())
-            .then(data => console.log(data));
-        }}
-    </script>
-    """.format(client_id=CLIENT_ID)
-
-    st.markdown(google_button, unsafe_allow_html=True)
-
-# Backend: Verify Google Token
-def verify_google_token(token):
-    """Verify Google OAuth token and return user information."""
+def google_login():
+    """Start Google OAuth login process."""
     try:
-        idinfo = google.oauth2.id_token.verify_oauth2_token(token, google.auth.transport.requests.Request(), CLIENT_ID)
-        return idinfo  # Returns user info (email, name, picture, etc.)
+        # Load Google OAuth credentials
+        flow = Flow.from_client_secrets_file(
+            GOOGLE_CREDENTIALS_FILE,
+            scopes=["openid", "email", "profile"],
+            redirect_uri=STREAMLIT_URL
+        )
+        
+        auth_url, state = flow.authorization_url(prompt="consent")
+        
+        # Store state in session
+        st.session_state["oauth_state"] = state
+        
+        # Display Google Login button
+        st.markdown(f'<a href="{auth_url}" target="_self"><button>Login with Google</button></a>', unsafe_allow_html=True)
+    
+    except Exception as e:
+        st.error(f"Login error: {e}")
+
+def verify_google_token(token):
+    """Verify the Google OAuth token and return user info."""
+    try:
+        idinfo = id_token.verify_oauth2_token(token, google.auth.transport.requests.Request(), None)
+        return idinfo  # Contains user email, name, picture, etc.
     except ValueError:
         return None
 
-# Check if the user is logged in
-if 'user' not in st.session_state:
-    st.session_state.user = None
-
-# Fetch token from URL query params
+# Fetch OAuth token from URL (if available)
 query_params = st.experimental_get_query_params()
 token = query_params.get("token", [None])[0]
 
@@ -65,16 +61,17 @@ if token:
     user_info = verify_google_token(token)
     if user_info:
         st.session_state.user = user_info
-        st.success(f"Welcome, {user_info['name']}! 🎉")
+        st.success(f"✅ Logged in as: {user_info['email']}")
+        st.image(user_info["picture"], width=100)
     else:
         st.error("Google authentication failed.")
 
-# Show login or logged-in message
-if st.session_state.user:
-    st.write(f"✅ You are logged in as: **{st.session_state.user['email']}**")
-    st.image(st.session_state.user["picture"], width=100)
+# Show login button if user is not logged in
+if st.session_state.user is None:
+    google_login()
 else:
-    login_with_google()
+    st.success(f"Welcome, {st.session_state.user['name']}!")
+    st.write("You are now logged in! 🎉")
     
 
 #%% function for page 'คำนวณ vat'
