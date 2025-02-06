@@ -10,6 +10,38 @@ from PyPDF2 import PdfMerger
 import zipfile
 import pypdf
 import time
+from google.oauth2 import id_token
+from google.auth.transport import requests
+import json
+
+# Load client ID from Google credentials JSON file
+CLIENT_ID = "your-client-id.apps.googleusercontent.com"
+
+def login_with_google():
+    st.subheader("Login with Google")
+    login_button = st.button("Login via Google")
+
+    if login_button:
+        st.markdown(f"""
+            <script>
+                function authenticate() {{
+                    var auth2 = gapi.auth2.getAuthInstance();
+                    auth2.signIn().then(function(googleUser) {{
+                        var id_token = googleUser.getAuthResponse().id_token;
+                        fetch('{st.experimental_get_query_params()}?token=' + id_token)
+                        .then(response => response.json())
+                        .then(data => console.log(data));
+                    }});
+                }}
+            </script>
+            <script src="https://apis.google.com/js/platform.js" async defer></script>
+            <meta name="google-signin-client_id" content="{CLIENT_ID}">
+            <div class="g-signin2" data-onsuccess="authenticate"></div>
+        """, unsafe_allow_html=True)
+
+# Call login function in Streamlit
+login_with_google()
+
 #%% function for page 'คำนวณ vat'
 @st.cache_data(show_spinner=False)
 def vat_cal_sale_shopee(store, df):
