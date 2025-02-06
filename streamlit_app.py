@@ -12,7 +12,8 @@ import pypdf
 import time
 from google.oauth2 import id_token
 import google.auth.transport.requests
-import google_auth_oauthlib.flow
+from google_auth_oauthlib.flow import Flow
+import os
 import json
 
 # Load client ID from Google credentials JSON file
