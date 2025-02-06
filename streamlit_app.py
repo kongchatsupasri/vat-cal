@@ -21,6 +21,8 @@ CLIENT_ID = "528072291091-3nigo5rv42k4lpbuekmv8s9l0lv6i7k5.apps.googleuserconten
 
 # Get Streamlit Cloud URL
 STREAMLIT_URL = "https://your-app-name.streamlit.app/"
+# Define Google OAuth credentials file (Make sure this file exists!)
+GOOGLE_CREDENTIALS_FILE = "client_secrets.json"
 
 # Initialize session state
 if "user" not in st.session_state:
