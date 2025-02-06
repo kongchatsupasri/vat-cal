@@ -11,60 +11,70 @@ import zipfile
 import pypdf
 import time
 from google.oauth2 import id_token
-from google.auth.transport import requests
+import google.auth.transport.requests
 import json
 
 # Load client ID from Google credentials JSON file
 CLIENT_ID = "528072291091-3nigo5rv42k4lpbuekmv8s9l0lv6i7k5.apps.googleusercontent.com"
 
+st.set_page_config(page_title="Login", page_icon="🔐")
+
 def login_with_google():
+    """Display Google Sign-In button and authenticate user."""
     st.subheader("Login with Google")
-    login_button = st.button("Login via Google")
 
-    if login_button:
-        st.markdown(f"""
-            <script>
-                function authenticate() {{
-                    var auth2 = gapi.auth2.getAuthInstance();
-                    auth2.signIn().then(function(googleUser) {{
-                        var id_token = googleUser.getAuthResponse().id_token;
-                        fetch('{st.query_params()}?token=' + id_token)
-                        .then(response => response.json())
-                        .then(data => console.log(data));
-                    }});
-                }}
-            </script>
-            <script src="https://apis.google.com/js/platform.js" async defer></script>
-            <meta name="google-signin-client_id" content="{CLIENT_ID}">
-            <div class="g-signin2" data-onsuccess="authenticate"></div>
-        """, unsafe_allow_html=True)
+    # Frontend: Google Sign-In Button
+    google_button = """
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="g_id_onload"
+        data-client_id="{client_id}"
+        data-callback="onSignIn"
+        data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin" data-type="standard"></div>
 
-# Call login function in Streamlit
-login_with_google()
+    <script>
+        function onSignIn(response) {{
+            fetch("/?token=" + response.credential)
+            .then(response => response.json())
+            .then(data => console.log(data));
+        }}
+    </script>
+    """.format(client_id=CLIENT_ID)
 
+    st.markdown(google_button, unsafe_allow_html=True)
+
+# Backend: Verify Google Token
 def verify_google_token(token):
+    """Verify Google OAuth token and return user information."""
     try:
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), CLIENT_ID)
-        return idinfo  # Returns user info (email, name, etc.)
+        idinfo = google.oauth2.id_token.verify_oauth2_token(token, google.auth.transport.requests.Request(), CLIENT_ID)
+        return idinfo  # Returns user info (email, name, picture, etc.)
     except ValueError:
         return None
 
-# Check if user is logged in
+# Check if the user is logged in
 if 'user' not in st.session_state:
     st.session_state.user = None
 
-if st.query_params.get("token"):
-    user_info = verify_google_token(st.query_params["token"])
+# Fetch token from URL query params
+query_params = st.experimental_get_query_params()
+token = query_params.get("token", [None])[0]
+
+if token:
+    user_info = verify_google_token(token)
     if user_info:
         st.session_state.user = user_info
         st.success(f"Welcome, {user_info['name']}! 🎉")
     else:
         st.error("Google authentication failed.")
 
-# If logged in, display content
+# Show login or logged-in message
 if st.session_state.user:
-    st.write("You are now logged in!")
-    st.write(f"Email: {st.session_state.user['email']}")
+    st.write(f"✅ You are logged in as: **{st.session_state.user['email']}**")
+    st.image(st.session_state.user["picture"], width=100)
+else:
+    login_with_google()
     
 
 #%% function for page 'คำนวณ vat'
