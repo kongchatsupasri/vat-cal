@@ -28,7 +28,7 @@ def login_with_google():
                     var auth2 = gapi.auth2.getAuthInstance();
                     auth2.signIn().then(function(googleUser) {{
                         var id_token = googleUser.getAuthResponse().id_token;
-                        fetch('{st.experimental_get_query_params()}?token=' + id_token)
+                        fetch('{st.query_params()}?token=' + id_token)
                         .then(response => response.json())
                         .then(data => console.log(data));
                     }});
