@@ -15,7 +15,7 @@ from google.auth.transport import requests
 import json
 
 # Load client ID from Google credentials JSON file
-CLIENT_ID = "your-client-id.apps.googleusercontent.com"
+CLIENT_ID = "528072291091-3nigo5rv42k4lpbuekmv8s9l0lv6i7k5.apps.googleusercontent.com"
 
 def login_with_google():
     st.subheader("Login with Google")
@@ -28,7 +28,7 @@ def login_with_google():
                     var auth2 = gapi.auth2.getAuthInstance();
                     auth2.signIn().then(function(googleUser) {{
                         var id_token = googleUser.getAuthResponse().id_token;
-                        fetch('{st.experimental_get_query_params()}?token=' + id_token)
+                        fetch('{st.query_params()}?token=' + id_token)
                         .then(response => response.json())
                         .then(data => console.log(data));
                     }});
