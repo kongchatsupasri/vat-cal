@@ -32,7 +32,7 @@ flow = Flow.from_client_config(
     scopes=["openid", "https://www.googleapis.com/auth/userinfo.email"],
     redirect_uri=REDIRECT_URI
 )
-
+st.write('ccc')
 auth_url, state = flow.authorization_url(prompt="consent")
 
 st.write("Click below to log in with Google:")
