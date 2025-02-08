@@ -34,7 +34,7 @@ flow = Flow.from_client_config(
         "https://www.googleapis.com/auth/userinfo.email",
         "https://www.googleapis.com/auth/userinfo.profile"
     ],
-    redirect_uri="https://your-app-name.streamlit.app/"
+    redirect_uri="https://vat-cal.streamlit.app"
 )
 
 st.write('ccc')
