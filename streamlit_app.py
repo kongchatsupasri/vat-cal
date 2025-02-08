@@ -8,7 +8,7 @@ if "GOOGLE_CLIENT_ID" in st.secrets:
     st.write(st.secrets)
     CLIENT_ID = st.secrets["GOOGLE_CLIENT_ID"]
     CLIENT_SECRET = st.secrets["GOOGLE_CLIENT_SECRET"]
-    REDIRECT_URI = "https://vat-cal.streamlit.app/"
+    REDIRECT_URI = "https://vat-cal.streamlit.app"
 else:
     st.write('bbb')
     st.write(st.secrets)
