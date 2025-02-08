@@ -24,7 +24,7 @@ flow = Flow.from_client_config(
         "web": {
             "client_id": st.secrets["GOOGLE_CLIENT_ID"],
             "client_secret": st.secrets["GOOGLE_CLIENT_SECRET"],
-            "redirect_uris": ["https://your-app-name.streamlit.app/"],
+            "redirect_uris": ["https://vat-cal.streamlit.app/"],
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token"
         }
