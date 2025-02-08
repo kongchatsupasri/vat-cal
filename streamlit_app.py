@@ -22,16 +22,21 @@ st.title("Google Login with Streamlit")
 flow = Flow.from_client_config(
     {
         "web": {
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-            "redirect_uris": [REDIRECT_URI],
+            "client_id": st.secrets["GOOGLE_CLIENT_ID"],
+            "client_secret": st.secrets["GOOGLE_CLIENT_SECRET"],
+            "redirect_uris": ["https://your-app-name.streamlit.app/"],
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token"
         }
     },
-    scopes=["openid", "https://www.googleapis.com/auth/userinfo.email"],
-    redirect_uri=REDIRECT_URI
+    scopes=[
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile"
+    ],
+    redirect_uri="https://your-app-name.streamlit.app/"
 )
+
 st.write('ccc')
 auth_url, state = flow.authorization_url(prompt="consent")
 
