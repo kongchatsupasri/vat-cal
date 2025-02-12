@@ -1057,6 +1057,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
 
                             sheet.append_row([
                                 'check1.8', 
+                                selected_year,
                                 current_time.strftime('%Y-%m-%d %H:%M:%S'),
                                 user_type,
                                 user_name, 
