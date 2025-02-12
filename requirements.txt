@@ -9,4 +9,3 @@ datetime
 mimetypes
 gspread
 oauth2client
-pandas
