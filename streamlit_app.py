@@ -1246,7 +1246,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                 key = f'commission_file_{store_name}_{commission_tab_name}'
                             )
                             if lazada_commission_files != None and lazada_commission_files != []:
-                                st.success(f'อัพโหลดไฟล์ {lazada_commission_files} ไฟล์สำเร็จ', icon="✅")
+                                st.success(f'อัพโหลดไฟล์ {len(lazada_commission_files)} ไฟล์สำเร็จ', icon="✅")
                             else:
                                 st.warning(f'หลังจากอัพโหลดไฟล์ค่าธรรมเนียม Shopee สำเร็จแล้ว tab จะเปลี่ยนเป็นสีเขียว', icon="ℹ️")
 
@@ -1360,56 +1360,56 @@ elif sidebar_radio == 'คำนวณ VAT':
 
                 cont=True
                 for key, value in st.session_state.items(): #value = uploaded file
-                    if value != None:
-                        ############## sale ##############
-                        if 'monthly_sale_file_' in key and 'Shopee' in key:
-                            store = key.split('_')[-2]
-                            if store not in st.session_state['sale_d'].keys():
-                                st.session_state['sale_d'][store] = {}
+                    # if value != None:
+                    ############## sale ##############
+                    if 'monthly_sale_file_' in key and 'Shopee' in key:
+                        store = key.split('_')[-2]
+                        if store not in st.session_state['sale_d'].keys():
+                            st.session_state['sale_d'][store] = {}
 
-                            st.session_state['sale_d'][store]['Shopee'] = vat_cal_sale_shopee(shopee_sale_file = value, year = year, store = store, month = month)
+                        st.session_state['sale_d'][store]['Shopee'] = vat_cal_sale_shopee(shopee_sale_file = value, year = year, store = store, month = month)
 
-                        elif 'monthly_sale_file_' in key and 'Lazada' in key:
-                            store = key.split('_')[-2]
-                            if store not in st.session_state['sale_d'].keys():
-                                st.session_state['sale_d'][store] = {}
+                    elif 'monthly_sale_file_' in key and 'Lazada' in key:
+                        store = key.split('_')[-2]
+                        if store not in st.session_state['sale_d'].keys():
+                            st.session_state['sale_d'][store] = {}
 
-                            st.session_state['sale_d'][store]['Lazada'] = vat_cal_sale_lazada(lazada_sale_file = value, year = year, store = store, month = month)
+                        st.session_state['sale_d'][store]['Lazada'] = vat_cal_sale_lazada(lazada_sale_file = value, year = year, store = store, month = month)
 
-                        elif 'monthly_sale_file_' in key and 'TikTok' in key:
-                            store = key.split('_')[-2]
-                            if store not in st.session_state['sale_d'].keys():
-                                st.session_state['sale_d'][store] = {}
+                    elif 'monthly_sale_file_' in key and 'TikTok' in key:
+                        store = key.split('_')[-2]
+                        if store not in st.session_state['sale_d'].keys():
+                            st.session_state['sale_d'][store] = {}
 
-                            st.session_state['sale_d'][store]['TikTok'] = vat_cal_sale_tiktok(tiktok_sale_file = value, year = year, store = store, month = month)
+                        st.session_state['sale_d'][store]['TikTok'] = vat_cal_sale_tiktok(tiktok_sale_file = value, year = year, store = store, month = month)
 
-                        ############## commission ##############
-                        if 'commission_file_' in key and 'Shopee' in key:
-                            store = key.split('_')[-2]
-                            if store not in st.session_state['commission_d'].keys():
-                                st.session_state['commission_d'][store] = {}
+                    ############## commission ##############
+                    elif 'commission_file_' in key and 'Shopee' in key:
+                        store = key.split('_')[-2]
+                        if store not in st.session_state['commission_d'].keys():
+                            st.session_state['commission_d'][store] = {}
 
-                            st.session_state['commission_d'][store]['Shopee'] = vat_cal_commission_shopee(store_name = store, shopee_zip_file = value, month = month, year = year) 
+                        st.session_state['commission_d'][store]['Shopee'] = vat_cal_commission_shopee(store_name = store, shopee_zip_file = value, month = month, year = year) 
 
-                        elif 'commission_file_' in key and 'Lazada' in key:
-                            store = key.split('_')[-2]
-                            if store not in st.session_state['commission_d'].keys():
-                                st.session_state['commission_d'][store] = {}
+                    elif 'commission_file_' in key and 'Lazada' in key:
+                        store = key.split('_')[-2]
+                        if store not in st.session_state['commission_d'].keys():
+                            st.session_state['commission_d'][store] = {}
 
-                            st.session_state['commission_d'][store]['Lazada'] = vat_cal_commission_lazada(store_name = store, lazada_file_ls = value, month = month, year = year)
+                        st.session_state['commission_d'][store]['Lazada'] = vat_cal_commission_lazada(store_name = store, lazada_file_ls = value, month = month, year = year)
 
-                        elif 'commission_file_' in key and 'TikTok' in key:
-                            store = key.split('_')[-2]
+                    elif 'commission_file_' in key and 'TikTok' in key:
+                        store = key.split('_')[-2]
 
-                            if store not in st.session_state['commission_d'].keys():
-                                st.session_state['commission_d'][store] = {}
+                        if store not in st.session_state['commission_d'].keys():
+                            st.session_state['commission_d'][store] = {}
 
-                            st.session_state['commission_d'][store]['TikTok'] = vat_cal_commission_tiktok(store_name = store, tiktok_zip_file = value, month = month, year =year) 
+                        st.session_state['commission_d'][store]['TikTok'] = vat_cal_commission_tiktok(store_name = store, tiktok_zip_file = value, month = month, year =year) 
             
                     
-                    else:
+                    # else:
                         #ไม่มีไฟล์ของร้านนี้
-                        pass
+                        # pass
 
                 # st.write(st.session_state)
                 ############# merge data ##############  
