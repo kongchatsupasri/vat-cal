@@ -166,7 +166,7 @@ def total_sale_lazada(lazada_file, selected_year, store, is_full_year, current_m
             uncompleted_order_count = len(df[df['status'] != 'confirmed']['status'].unique().tolist())
             if uncompleted_order_count != 0:
                 st.warning(f"ไฟล์ของร้าน {store} จาก Lazada ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
-                st.dataframe(df[df['status'] != 'confirmed'])
+                # st.dataframe(df[df['status'] != 'confirmed'])
             ##################################################################################################
 
             df['createTime'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.date
@@ -363,7 +363,7 @@ def vat_cal_sale_lazada(lazada_sale_file, year, store, month):
         uncompleted_order_count = len(df[df['status'] != 'confirmed']['status'].unique().tolist())
         if uncompleted_order_count != 0:
             st.warning(f"ไฟล์ของร้าน {store} (Lazada) ยังมีคำสั่งซื้อที่ยังไม่สำเร็จอยู่ {uncompleted_order_count} รายการ --> อาจทำให้ค่ารายได้รวมเปลี่ยนแปลงได้หากมีการยกเลิกคำสั่งซื้อ", icon="⚠️")
-            st.dataframe(df[df['status'] != 'confirmed'])
+            # st.dataframe(df[df['status'] != 'confirmed'])
         ##################################################################################################
 
     df['createTime'] = pd.to_datetime(df['createTime'], format = '%d %b %Y %H:%M').dt.date
