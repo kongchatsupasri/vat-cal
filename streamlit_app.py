@@ -1499,7 +1499,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                         df2 = df1[df1['platform'] == platform].reset_index(drop = True)
 
                         merger = PdfMerger()
-                        for pdf in pdf_df1.sort_values(by = 'doc_date', ascending = True)['pdf_file']:
+                        for pdf in df2.sort_values(by = 'doc_date', ascending = True)['pdf_file']:
 
                             merger.append(pdf)
 
