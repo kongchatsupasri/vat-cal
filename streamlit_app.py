@@ -1051,7 +1051,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
                         if st.session_state.form_submitted:
                             gdrive_credentials = json.loads(st.secrets["gdrive"]["GOOGLE_SHEETS_CREDENTIALS"])
                             scope = ["https://spreadsheets.google.com/feeds",'https://www.googleapis.com/auth/spreadsheets',"https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive"]
-                            cerds = ServiceAccountCredentials.from_json_keyfile_name(gdrive_credentials, scope)
+                            cerds = ServiceAccountCredentials.from_json_keyfile_dict(gdrive_credentials, scope)
                             client = gspread.authorize(cerds)
                             sheet = client.open("user_data").worksheet('check1.8') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
 
@@ -1566,7 +1566,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                     if submit_button:
                         gdrive_credentials = json.loads(st.secrets["gdrive"]["GOOGLE_SHEETS_CREDENTIALS"])
                         scope = ["https://spreadsheets.google.com/feeds",'https://www.googleapis.com/auth/spreadsheets',"https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive"]
-                        cerds = ServiceAccountCredentials.from_json_keyfile_name(gdrive_credentials, scope)
+                        cerds = ServiceAccountCredentials.from_json_keyfile_dict(gdrive_credentials, scope)
                         client = gspread.authorize(cerds)
                         sheet = client.open("user_data").worksheet('check1.8') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
 
