@@ -3,3 +3,4 @@ PyPDF2
 pypdf
 openpyxl
 gspread
+oauth2client
