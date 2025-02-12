@@ -1656,7 +1656,7 @@ elif sidebar_radio == 'วิธีใช้':
 elif sidebar_radio == 'Q&A':
     st.header(f'💡 {sidebar_radio}', divider='grey')
 
-    qa_df = pd.read_excel('qa.xlsx').sort_values(by = 'order', ascending = True).reset_index(drop = True)
+    qa_df = pd.read_excel('qa (2).xlsx').sort_values(by = 'order', ascending = True).reset_index(drop = True)
     for i in range(qa_df.shape[0]):
         # st.write(i)
         #q = qa_df.iloc[i, 1]
