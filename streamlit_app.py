@@ -690,7 +690,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
     # st.markdown('<hr style="margin-top: 0px; margin-bottom: 0px;">', unsafe_allow_html=True)
     selected_year = st.selectbox(
         label = "เลือกปีที่ต้องการคำนวณ",
-        options = (str(pd.Timestamp.today().year), (str(pd.Timestamp.today().year - 1) + ' (เช็คว่าาต้องจด VAT ตั้งแต่ปีที่แล้วรึไม่)')), 
+        options = (str(pd.Timestamp.today().year), (str(pd.Timestamp.today().year - 1) + ' (ตรวจสอบว่ายอดถึงเกณฑ์จด VAT ตั้งแต่ปีก่อนหน้าหรือไม่)')), 
         index = None, 
         placeholder = 'เลือกปี',
         label_visibility = 'collapsed'
