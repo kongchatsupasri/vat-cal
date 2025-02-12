@@ -1518,6 +1518,14 @@ elif sidebar_radio == 'คำนวณ VAT':
                         excel_buffer = BytesIO()
                         with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
                             df.to_excel(writer, index=False, sheet_name="Sheet1")
+
+                            # **Auto-adjust column width**
+                            workbook = writer.book
+                            worksheet = writer.sheets["Sheet1"]
+                            for col_num, column in enumerate(df.columns):
+                                max_length = max(df[column].astype(str).apply(len).max(), len(column)) + 2
+                                worksheet.set_column(col_num, col_num, max_length)
+                            
                         excel_buffer.seek(0)
 
                         zipf.writestr(f'รายงานภาษีขาย_{month}-{year}.xlsx' if i == 0 else f'รายงานภาษีซื้อ_{month}-{year}.xlsx', excel_buffer.read())
