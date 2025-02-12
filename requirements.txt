@@ -5,7 +5,6 @@ pypdf
 openpyxl
 streamlit-authenticator
 google-auth-oauthlib
-time
 datetime
 mimetypes
 gspread
