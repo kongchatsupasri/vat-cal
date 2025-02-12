@@ -289,6 +289,7 @@ def total_sale_tiktok(tiktok_file, selected_year, store, is_full_year, current_m
 @st.cache_data(show_spinner=False)
 def vat_cal_sale_shopee(shopee_sale_file, year, store, month):
     df = pd.read_excel(shopee_sale_file, converters={'หมายเลขคำสั่งซื้อ':str})
+    st.dataframe(df)
     df = df[~df['สถานะการสั่งซื้อ'].isin(['ยกเลิกแล้ว'])].drop_duplicates()
 
     df['year'] = pd.to_datetime(df['วันที่ทำการสั่งซื้อ'], format = '%Y-%m-%d %H:%M').dt.year #สำหรับตรวจว่า ปีของข้อมูลที่อัพโหลดมา ตรงกับปีที่เลือกไหม
