@@ -338,7 +338,7 @@ def vat_cal_sale_shopee(shopee_sale_file, year, store, month):
         shopee_sale_df_result = pd.DataFrame(sale_ls, columns = ['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat'])
         shopee_sale_df_result = shopee_sale_df_result[['platform', 'store_name', 'type', 'order_date', 'status', 'order_no', 'customer_name', 'before_vat', 'vat', 'include_vat']]
 
-        return shopee_sale_df_result
+    return shopee_sale_df_result
     
 @st.cache_data(show_spinner=False)
 def vat_cal_sale_lazada(lazada_sale_file, year, store, month):
