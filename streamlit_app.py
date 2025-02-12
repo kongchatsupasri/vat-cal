@@ -1523,7 +1523,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                             workbook = writer.book
                             worksheet = writer.sheets["Sheet1"]
                             for col_num, column in enumerate(df.columns):
-                                max_length = max(df[column].astype(str).apply(len).max(), len(column)) + 2
+                                max_length = max(df[column].astype(str).apply(len).max(), len(column))
                                 worksheet.set_column(col_num, col_num, max_length)
                             
                         excel_buffer.seek(0)
