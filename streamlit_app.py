@@ -1243,7 +1243,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                     4. ที่ tab "ผู้บริการให้ใบแจ้งหนี้" เลือก "LAZADA"\n 
                                     5. เลือกใบเสร็จค่าธรรมเนียมที่มี "รอบบิล" ตรงกับเดือนที่ต้องการคำนวณ VAT\n
                                 ''')
-                                st.warning('LAZADA ออกใบเสร็จรายสัปดาห์ ในกรณีที่เป็นสัปดาห์คร่อมเดือนในช่วงต้นเดือน เลือก "ใบแจ้งหนี้" และในกรณีที่เป็นสัปดาห์คร่อมปลายเดือน ให้เลือก "ในแจ้งหนี (สิ้นเดือน)"', icon="ℹ️")
+                                st.warning('LAZADA ออกใบเสร็จรายสัปดาห์ ในกรณีที่เป็นสัปดาห์คร่อมเดือนในช่วงต้นเดือน เลือก "ใบแจ้งหนี้" และในกรณีที่เป็นสัปดาห์คร่อมปลายเดือน ให้เลือก "ใบแจ้งหนี (สิ้นเดือน)"', icon="ℹ️")
                             lazada_commission_files = st.file_uploader(
                                 label = f'รองรับการอัพโหลดหลายไฟล์พร้อมกัน (.pdf)', 
                                 accept_multiple_files = True, 
@@ -1358,7 +1358,7 @@ elif sidebar_radio == 'คำนวณ VAT':
 
             cal_col1, cal_col2, cal_col3 = st.columns([2, 1, 2])
             with cal_col2:
-                if st.button('calculate', use_container_width = True):
+                if st.button('📬 คำนวณ', use_container_width = True):
                     st.session_state['vat_calculate_clicked'] = True
                     st.session_state.selected_tax_id = set()
 
@@ -1463,7 +1463,7 @@ elif sidebar_radio == 'คำนวณ VAT':
 
                     finish_tick_col1, finish_tick_col2, finish_tick_col3 = st.columns([2, 1, 2])
                     with finish_tick_col2:
-                        if st.button('finish ticking', use_container_width=True):
+                        if st.button('เลือกเสร็จแล้วให้คลิกที่นี่', use_container_width=True):
                             commission_df1 = commission_df[commission_df["company_tax_id"].isin(st.session_state['selected_tax_id'])].sort_values(by = ['store_name', 'platform', 'doc_date', 'doc_num'], ascending = [True, True, True, True]).reset_index(drop = True)
 
                             pdf_df1 = pdf_df[pdf_df["company_tax_id"].isin(st.session_state['selected_tax_id'])].sort_values(by = ['store_name', 'platform', 'doc_date', 'doc_num'], ascending = [True, True, True, True]).reset_index(drop = True)
@@ -1682,6 +1682,8 @@ elif sidebar_radio == 'Q&A':
         # st.markdown(f'<h4>🟢 {q}?</h4>', unsafe_allow_html=True)
         with st.expander(q, icon = '📌'):
             st.write(a)
+            st.write('')
+            st.wrtie('')
         # st.subheader(f'{i + 1}. {q}?')
         # st.write(f'- {a}')
         # st.write('')
