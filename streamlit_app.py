@@ -1656,11 +1656,11 @@ elif sidebar_radio == 'วิธีใช้':
 elif sidebar_radio == 'Q&A':
     st.header(f'💡 {sidebar_radio}', divider='grey')
 
-    qa_df = pd.read_csv('qa.csv').sort_values(by = 'order', ascending = True).reset_index(drop = True)
+    qa_df = pd.read_excel('qa.xlsx').sort_values(by = 'order', ascending = True).reset_index(drop = True)
     for i in range(qa_df.shape[0]):
         # st.write(i)
-        q = qa_df.iloc[i, 1]
-        a = qa_df.iloc[i, 2]
+        #q = qa_df.iloc[i, 1]
+        #a = qa_df.iloc[i, 2]
         # st.markdown(f'<h4>🟢 {q}?</h4>', unsafe_allow_html=True)
         with st.expander(q, icon = '📌'):
             st.write(a)
