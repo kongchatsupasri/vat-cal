@@ -1573,6 +1573,7 @@ elif sidebar_radio == 'คำนวณ VAT':
 
                         sheet.append_row([
                             'vat_cal', 
+                            selected_month,
                             pd.to_datetime('today').strftime('%Y-%m-%d %H:%M:%S'),
                             user_type,
                             user_name, 
