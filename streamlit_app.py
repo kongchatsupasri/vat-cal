@@ -238,7 +238,7 @@ def total_sale_tiktok(tiktok_file, selected_year, store, is_full_year, current_m
                 st.warning('เดือนนี้เดือน 1 แต่ยังไม่จบเดือน มีโอกาสที่สถานะคำสั่งซื้อจะยังเปลี่ยนแปลงอยู่นะ', icon="ℹ️")
 
                 date_ls = sorted(pd.date_range(start = f'1/1/{selected_year}', end = current_time.strftime('%d/%m/%Y'), freq= 'D'))
-                st.write(date_ls)
+                # st.write(date_ls)
             else:
                 if selected_year == current_year: #ไม่ใช่เดือน 1 แล้ว แต่กำลังดูข้อมูลปี ปจบ
                     st.info('เดือนนี้ยังไม่จบ ใช้ข้อมูลถึงแค่เดือนที่แล้วมาคำนวณ', icon="ℹ️")
@@ -1568,7 +1568,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                         scope = ["https://spreadsheets.google.com/feeds",'https://www.googleapis.com/auth/spreadsheets',"https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive"]
                         cerds = ServiceAccountCredentials.from_json_keyfile_dict(gdrive_credentials, scope)
                         client = gspread.authorize(cerds)
-                        sheet = client.open("user_data").worksheet('check1.8') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
+                        sheet = client.open("user_data").worksheet('vat_cal') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
 
                         sheet.append_row([
                             'vat_cal', 
@@ -1584,7 +1584,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                         if email_input.strip() and user_name.strip() and user_surname.strip() and agree:
                             st.session_state.form_submitted = True  # Mark form as submitted
                             st.success("✅ ข้อมูลถูกต้อง! ส่งอีเมล...")
-                            st.write([email_input, user_name, user_surname, user_type, agree])
+                            # st.write([email_input, user_name, user_surname, user_type, agree])
                         else:
                             st.warning("⚠️ กรุณากรอกข้อมูลให้ครบถ้วนก่อนกด Submit!")
 
