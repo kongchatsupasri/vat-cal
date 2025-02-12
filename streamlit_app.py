@@ -1683,7 +1683,7 @@ elif sidebar_radio == 'Q&A':
         with st.expander(q, icon = '📌'):
             st.write(a)
             st.write('')
-            st.wrtie('')
+            st.write('')
         # st.subheader(f'{i + 1}. {q}?')
         # st.write(f'- {a}')
         # st.write('')
