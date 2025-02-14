@@ -8,6 +8,7 @@ from io import BytesIO
 from PyPDF2 import PdfMerger
 import zipfile
 import pypdf
+from PIL import Image
 import json
 import time
 import smtplib
@@ -641,7 +642,7 @@ def vat_cal_commission_tiktok(store_name, tiktok_zip_file, month, year):
         }
 
 #%% sidebar
-st.set_page_config(page_icon = st.image('icon.png'))
+st.set_page_config(page_icon = Image.open("icon.ico"))
 with st.sidebar:
     st.header('✅ VAT Cal', divider = 'orange')
     st.write('#')
