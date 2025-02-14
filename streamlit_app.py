@@ -1638,7 +1638,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                     zip_buffer.read(),
                                     maintype="application",
                                     subtype="zip",
-                                    filename="zip_file.zip"
+                                    filename=f"เอกสารแนบยื่นVAT_{year}-{month}.zip"
                                 )
 
                                 # Send email via Gmail SMTP server
