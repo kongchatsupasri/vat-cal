@@ -767,7 +767,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
                                 
                             ################# upload lazada #################
                             elif tab_name == 'Lazada':
-                                with st.expander("📥 กดดูวิธี Download ไฟล์ยอดขายจาก Lazada", use_container_width = True):
+                                with st.popover("📥 กดดูวิธี Download ไฟล์ยอดขายจาก Lazada", use_container_width = True):
                                     st.write('''
                                         1. Log in เข้า Lazada Seller Center
                                         2. เลือก "คำสั่งซื้อ"\n
@@ -788,7 +788,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
 
                             ################# upload TikTok #################
                             elif tab_name == 'TikTok':    
-                                with st.expander("📥 ดูวิธี Download ไฟล์ยอดขายจาก TikTok", use_container_width = True):
+                                with st.popover("📥 ดูวิธี Download ไฟล์ยอดขายจาก TikTok", use_container_width = True):
                                     st.write('''
                                         1. Log in เข้า TikTok Seller Center
                                         2. เลือก "คำสั่งซื้อ" -> "จัดการคำสั่งซื้อ"\n
@@ -1134,7 +1134,7 @@ elif sidebar_radio == 'คำนวณ VAT':
         
                         ################ upload shopee #################
                         if sale_tab_name == 'Shopee': 
-                            with st.expander("📥 กดดูวิธี Download ไฟล์ยอดขายจาก Shopee", use_container_width = True):
+                            with st.popover("📥 กดดูวิธี Download ไฟล์ยอดขายจาก Shopee", use_container_width = True):
                                 st.write('''
                                     1. Log in เข้า Shopee Seller Center\n
                                     2. เลือก "คำสั่งซื้อของฉัน"\n
@@ -1158,7 +1158,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                             
                         ################# upload lazada #################
                         elif sale_tab_name == 'Lazada':
-                            with st.expander("📥 กดดูวิธี Download ไฟล์ยอดขายจาก Lazada", use_container_width = True):
+                            with st.popover("📥 กดดูวิธี Download ไฟล์ยอดขายจาก Lazada", use_container_width = True):
                                 st.write('''
                                     1. Log in เข้า Lazada Seller Center
                                     2. เลือก "คำสั่งซื้อ"\n
@@ -1179,7 +1179,7 @@ elif sidebar_radio == 'คำนวณ VAT':
 
                         ################# upload TikTok #################
                         elif sale_tab_name == 'TikTok':    
-                            with st.expander("📥 กดดูวิธี Download ไฟล์ยอดขายจาก TikTok", use_container_width = True):
+                            with st.popover("📥 กดดูวิธี Download ไฟล์ยอดขายจาก TikTok", use_container_width = True):
                                 st.write('''
                                     1. Log in เข้า TikTok Seller Center
                                     2. เลือก "คำสั่งซื้อ" -> "จัดการคำสั่งซื้อ"\n
@@ -1213,7 +1213,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                         # st.session_state[f'{store_name}_current_select_commission_tab'] = commission_tab_name
 
                         if commission_tab_name == 'Shopee': 
-                            with st.expander("📥 กดดูวิธี Download ไฟล์ค่าธรรมเนียม Shopee", use_container_width = True):
+                            with st.popover("📥 กดดูวิธี Download ไฟล์ค่าธรรมเนียม Shopee", use_container_width = True):
                                 st.write('''
                                     1. Log in เข้า Shopee Seller Center
                                     2. ที่ tab ด้านซ้าย เลือก "รายรับของฉัน"\n
@@ -1235,7 +1235,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                 st.warning(f'หลังจากอัพโหลดไฟล์ค่าธรรมเนียม Shopee สำเร็จแล้ว tab จะเปลี่ยนเป็นสีเขียว', icon="ℹ️")
 
                         elif commission_tab_name == 'Lazada':
-                            with st.expander("📥 กดดูวิธี Download ไฟล์ยอดขายจาก Lazada", use_container_width = True):
+                            with st.popover("📥 กดดูวิธี Download ไฟล์ยอดขายจาก Lazada", use_container_width = True):
                                 st.write('''
                                     1. Log in เข้า Lazada Seller Center
                                     2. ที่ tab "การเงิน" เลือก "รายรับของฉัน"\n
@@ -1256,7 +1256,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                 st.warning(f'หลังจากอัพโหลดไฟล์ค่าธรรมเนียม Shopee สำเร็จแล้ว tab จะเปลี่ยนเป็นสีเขียว', icon="ℹ️")
 
                         elif commission_tab_name == 'TikTok':
-                            with st.expander("📥 กดดูวิธี Download ไฟล์ค่าธรรมเนียม TikTok", use_container_width = True):
+                            with st.popover("📥 กดดูวิธี Download ไฟล์ค่าธรรมเนียม TikTok", use_container_width = True):
                                 st.write('''
                                     1. Log in เข้า TikTok Seller Center
                                     2. ที่ tab "การเงิน" เลือก "ใบแจ้งหนี้"\n
