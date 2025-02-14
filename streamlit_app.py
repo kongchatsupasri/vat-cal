@@ -740,7 +740,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
                             st.session_state[f'{store_name}_current_select_tab'] = tab_name
             
                             ################ upload shopee #################
-                            if tab_name == 'Upload file: Shopee': 
+                            if tab_name == 'Shopee': 
                                 with st.popover("📥 ดูวิธี Download ไฟล์ยอดขายจาก Shopee", use_container_width = True):
                                     st.write('''
                                         1. Log in เข้า Shopee Seller Center\n
@@ -766,7 +766,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
                                     st.warning(f'หลังจาก upload ไฟล์สำเร็จ tab นี้จะเปลี่ยนเป็นสีเขียว', icon="ℹ️")
                                 
                             ################# upload lazada #################
-                            elif tab_name == 'Upload file: Lazada':
+                            elif tab_name == 'Lazada':
                                 with st.popover("📥 กดดูวิธี Download ไฟล์ยอดขายจาก Lazada", use_container_width = True):
                                     st.write('''
                                         1. Log in เข้า Lazada Seller Center
@@ -787,7 +787,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
                                     st.warning(f'หลังจาก upload ไฟล์สำเร็จ tab นี้จะเปลี่ยนเป็นสีเขียว', icon="ℹ️")
 
                             ################# upload TikTok #################
-                            elif tab_name == 'Upload file: TikTok':    
+                            elif tab_name == 'TikTok':    
                                 with st.popover("📥 ดูวิธี Download ไฟล์ยอดขายจาก TikTok", use_container_width = True):
                                     st.write('''
                                         1. Log in เข้า TikTok Seller Center
