@@ -754,7 +754,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
                                         เดือน** ในปีที่ต้องการคำนวณ
                                     ''')
                                 shopee_files = st.file_uploader(
-                                    label = f'รองรับการอัพโหลดหลายไฟล์พร้อมกัน (.xlsx)', 
+                                    label = f'** รองรับการอัพโหลดหลายไฟล์พร้อมกัน (.xlsx)', 
                                     accept_multiple_files = True,
                                     type = 'xlsx', 
                                     key = f"sale_file_{store_name}_{tab_name}"
@@ -776,7 +776,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
                                         5. เลือก "Export" และเลือก "Export All"\n
                                     ''')
                                 lazada_file = st.file_uploader(
-                                    label = f'รองรับการอัพโหลด 1 ไฟล์ (.xlsx)', 
+                                    label = f'** รองรับการอัพโหลด 1 ไฟล์ (.xlsx)', 
                                     accept_multiple_files = False, 
                                     type = 'xlsx',
                                     key = f'sale_file_{store_name}_{tab_name}'
@@ -801,7 +801,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
                                         9. กด "ดาวน์โหลด"\n     
                                     ''')
                                 tiktok_file = st.file_uploader(
-                                    label = f'รองรับการอัพโหลด 1 ไฟล์ (.csv)', 
+                                    label = f'** รองรับการอัพโหลด 1 ไฟล์ (.csv)', 
                                     accept_multiple_files = False, 
                                     type = 'csv',
                                     key = f'sale_file_{store_name}_{tab_name}'
@@ -1145,7 +1145,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                     ** **หมายเหตุ**: ให้กดเลือกตั้งแต่วันแรกถึงวันสุดท้ายของเดือนที่ต้องการคำนวณ VAT
                                 ''')
                             shopee_monthly_sale_file = st.file_uploader(
-                                label = f'รองรับการอัพโหลด 1 ไฟล์ (.xlsx)', 
+                                label = f'** รองรับการอัพโหลด 1 ไฟล์ (.xlsx)', 
                                 accept_multiple_files = False,
                                 type = 'xlsx', 
                                 key = f"monthly_sale_file_{store_name}_{sale_tab_name}"
@@ -1167,7 +1167,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                     5. เลือก "Export" และเลือก "Export All"\n
                                 ''')
                             lazada_monthly_sale_file = st.file_uploader(
-                                label = f'รองรับการอัพโหลด 1 ไฟล์ (.xlsx)', 
+                                label = f'** รองรับการอัพโหลด 1 ไฟล์ (.xlsx)', 
                                 accept_multiple_files = False, 
                                 type = 'xlsx',
                                 key = f'monthly_sale_file_{store_name}_{sale_tab_name}'
@@ -1192,7 +1192,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                     9. กด "ดาวน์โหลด"\n     
                                 ''')
                             tiktok_monthly_sale_file = st.file_uploader(
-                                label = f'รองรับการอัพโหลด 1 ไฟล์ (.xlsx)', 
+                                label = f'** รองรับการอัพโหลด 1 ไฟล์ (.xlsx)', 
                                 accept_multiple_files = False, 
                                 type = 'csv',
                                 key = f'monthly_sale_file_{store_name}_{sale_tab_name}'
@@ -1223,7 +1223,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                     6. กด "ดาวน์โหลดทั้งหมด"\n
                                 ''')
                             shopee_commission_file = st.file_uploader(
-                                label = f'รองรับการอัพโหลด 1 ไฟล์ (.zip)', 
+                                label = f'** รองรับการอัพโหลด 1 ไฟล์ (.zip)', 
                                 accept_multiple_files = False,
                                 type = 'zip', 
                                 key = f"commission_file_{store_name}_{commission_tab_name}"
@@ -1245,7 +1245,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                 ''')
                                 st.warning('LAZADA ออกใบเสร็จรายสัปดาห์ ในกรณีที่เป็นสัปดาห์คร่อมเดือนในช่วงต้นเดือน เลือก "ใบแจ้งหนี้" และในกรณีที่เป็นสัปดาห์คร่อมปลายเดือน ให้เลือก "ใบแจ้งหนี (สิ้นเดือน)"', icon="ℹ️")
                             lazada_commission_files = st.file_uploader(
-                                label = f'รองรับการอัพโหลดหลายไฟล์พร้อมกัน (.pdf)', 
+                                label = f'** รองรับการอัพโหลดหลายไฟล์พร้อมกัน (.pdf)', 
                                 accept_multiple_files = True, 
                                 type = 'pdf',
                                 key = f'commission_file_{store_name}_{commission_tab_name}'
@@ -1267,7 +1267,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                 ''')
                                 st.warning('TikTok ออกใบเสร็จรายสัปดาห์ ใบเสร็จที่คร่อมเดือนในช่วงสัปดาห์แรกของเดือนมักจะอยู่ในไฟล์ของเดือนก่อนหน้า ฉนั้น เวลาดาวโหลดไฟล์จึงควรเลือก "สามเดือนที่แล้ว"', icon="ℹ️")
                             tiktok_commission_file = st.file_uploader(
-                                label = f'รองรับการอัพโหลด 1 ไฟล์ (.zip)', 
+                                label = f'** รองรับการอัพโหลด 1 ไฟล์ (.zip)', 
                                 accept_multiple_files = False,
                                 type = 'zip', 
                                 key = f"commission_file_{store_name}_{commission_tab_name}"
