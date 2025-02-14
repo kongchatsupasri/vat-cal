@@ -1689,11 +1689,6 @@ elif sidebar_radio == 'Q&A':
         # st.write(i)
         q = qa_df.iloc[i, 1]
         a = qa_df.iloc[i, 2]
-        # st.markdown(f'<h4>🟢 {q}?</h4>', unsafe_allow_html=True)
         with st.expander(q, icon = '📌'):
             st.write(a)
-        # st.write('')
         st.write('')
-        # st.subheader(f'{i + 1}. {q}?')
-        # st.write(f'- {a}')
-        # st.write('')
