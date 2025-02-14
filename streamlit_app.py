@@ -713,7 +713,7 @@ if sidebar_radio == 'เช็คว่าต้องจด VAT หรือย
 
                 st.subheader(f'2.{i + 1} {store_name}')
                 st.write('')
-                st.markdown(f'<h5>&nbsp;&nbsp;🗂️ เลือก platform ที่ขาย</h5>', unsafe_allow_html=True)
+                st.markdown(f'<h5>&nbsp;&nbsp;🗂️ เลือก platform ทั้งหมดที่ร้านที่ **{store_name}** ขายอยู่</h5>', unsafe_allow_html=True)
                 selected_platfrom = st.multiselect(
                         label = f'เลือก platform ทั้งหมดที่ร้านที่ **{store_name}** ขายอยู่', 
                         options = ['Shopee', 'Lazada', 'TikTok'], 
@@ -1106,7 +1106,7 @@ elif sidebar_radio == 'คำนวณ VAT':
         for i, store_name in enumerate(store_name_ls):
             st.subheader(f'2.{i + 1} {store_name}')
             st.write('')
-            st.markdown(f'<h5>&nbsp;&nbsp;🗂️ เลือก platform ที่ขาย</h5>', unsafe_allow_html=True)
+            st.markdown(f'<h5>&nbsp;&nbsp;🗂️ เลือก platform ทั้งหมดที่ร้านที่ **{store_name}** ขายอยู่</h5>', unsafe_allow_html=True)
             selected_platfrom = st.multiselect(
                     label = f'เลือก platform ทั้งหมดที่ร้านที่ **{store_name}** ขายอยู่', 
                     options = ['Shopee', 'Lazada', 'TikTok'], 
