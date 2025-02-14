@@ -643,9 +643,10 @@ def vat_cal_commission_tiktok(store_name, tiktok_zip_file, month, year):
 
 #%% sidebar
 st.set_page_config(
-        page_title="VAT Cal",
-        page_icon='https://raw.githubusercontent.com/kongchatsupasri/vat-cal/refs/heads/main/icon.png',
-)
+        page_title="Extract Favicon",
+        page_icon="https://freepngimg.com/thumb/world_wide_web/99120-www-free-hd-image.png"
+        )
+
 with st.sidebar:
     st.header('✅ VAT Cal', divider = 'orange')
     st.write('#')
