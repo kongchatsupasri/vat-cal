@@ -675,10 +675,18 @@ with st.sidebar:
     st.subheader('⚙️ เลือกเมนูคำนวณ')
     sidebar_radio = st.radio(
         label = 'เลือกเมนูคำนวณ',
-        options = ['วิธีใช้', 'เช็คว่าต้องจด VAT หรือยัง', 'คำนวณ VAT', 'Q&A'], 
+        options = ['เช็คว่าต้องจด VAT หรือยัง', 'คำนวณ VAT', 'Q&A'], 
         index = 1, 
         label_visibility = 'collapsed'
     )
+
+    with st.expander('วิธีใช้'):
+        st.write("""วิธีการใช้คร่าว ๆ คือ\n
+                    --> กดใส่ข้อมูลร้าน \n
+                    --> อัพโหลดไฟล์ \n
+                    --> กดคำนวณ \n
+                    --> ส่งไฟล์ผลลัพธ์ไปทาง email \n
+                    หากมีข้อส่งสัยสามารถสอบถามได้ทาง Page VAT Cal นะครับ""")
 #%%
 if sidebar_radio == 'เช็คว่าต้องจด VAT หรือยัง':
     before_session_key = st.session_state.keys()
