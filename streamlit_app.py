@@ -702,6 +702,28 @@ if sidebar_radio == 'About':
     st.markdown(
     """\n
     ***โปรแกรมนี้รองรับการคำนวณผ่าน Browser ในคอมพิวเตอร์เท่านั้น**
+    """, unsafe_allow_html=True)
+
+    st.markdown(
+    """\n
+    ***กดคำนวณที่ tab ">" ด้านข้าง**
+    """, unsafe_allow_html=True)
+
+    st.markdown(
+    """
+    <div style="display: flex; justify-content: center;">
+        <a href="https://www.facebook.com/profile.php?id=61573125832447" target="_blank">
+            <button style="padding: 12px 25px; font-size: 18px; background-color: #1877F2; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                Our Facebook Page
+            </button>
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+    st.divider()
+    st.markdown(
+    """\n
     
     โปรแกรมนี้ถูกทำขึ้นมาเพราะเราก็เป็นผู้ขายของออนไลน์และเคยปวดหัวกับการคำนวณยื่น VAT ทุก ๆ เดือนมาก่อน
 
@@ -720,18 +742,7 @@ if sidebar_radio == 'About':
     ถ้าเจอปัญหาโปรแกรมหรือต้องการข้อมูลเพิ่มเติมตรงไหนสามารถกดติดตามหรือสอบถามได้ที่ Facebook Page นะครับ
     """, unsafe_allow_html=True)
 
-    st.markdown(
-    """
-    <div style="display: flex; justify-content: center;">
-        <a href="https://www.facebook.com/profile.php?id=61573125832447" target="_blank">
-            <button style="padding: 12px 25px; font-size: 18px; background-color: #1877F2; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                Our Facebook Page
-            </button>
-        </a>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+    
     
 elif sidebar_radio == 'เช็คว่าต้องจด VAT หรือยัง':
     before_session_key = st.session_state.keys()
