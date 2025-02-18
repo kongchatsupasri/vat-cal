@@ -709,17 +709,17 @@ if sidebar_radio == 'About':
     ***กดคำนวณที่ tab ">" ด้านข้าง**
     """, unsafe_allow_html=True)
 
-    st.markdown(
-    """
-    <div style="display: flex; justify-content: center;">
-        <a href="https://www.facebook.com/profile.php?id=61573125832447" target="_blank">
-            <button style="padding: 12px 25px; font-size: 18px; background-color: #1877F2; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                Our Facebook Page
-            </button>
-        </a>
-    </div>
-    """,
-    unsafe_allow_html=True
+    # st.markdown(
+    # """
+    # <div style="display: flex; justify-content: center;">
+    #     <a href="https://www.facebook.com/profile.php?id=61573125832447" target="_blank">
+    #         <button style="padding: 12px 25px; font-size: 18px; background-color: #1877F2; color: white; border: none; border-radius: 8px; cursor: pointer;">
+    #             Our Facebook Page
+    #         </button>
+    #     </a>
+    # </div>
+    # """,
+    # unsafe_allow_html=True
 )
     st.divider()
     st.markdown(
