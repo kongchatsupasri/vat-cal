@@ -1619,7 +1619,7 @@ elif sidebar_radio == 'คำนวณ VAT':
 
 
                 st.markdown('<hr style="margin-top: 0px; margin-bottom: 0px;">', unsafe_allow_html=True)
-                st.subheader('4. ดาวน์โหลดไฟล์')
+                # st.subheader('4. ดาวน์โหลดไฟล์')
 
                 # Initialize session state for buttons
                 if "form_submitted" not in st.session_state:
