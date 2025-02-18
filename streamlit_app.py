@@ -775,9 +775,9 @@ elif sidebar_radio == 'เช็คว่าต้องจด VAT หรือ�
             
             for i, store_name in enumerate(store_name_ls):
 
-                st.subheader(f'2.{i + 1} {store_name}')
+                st.subheader(f'2.{i + 1} ร้าน {store_name}')
                 st.write('')
-                st.markdown(f'<h5>&nbsp;&nbsp;🗂️ เลือก platform ทั้งหมดที่ร้านที่ {store_name} ขายอยู่</h5>', unsafe_allow_html=True)
+                st.markdown(f'<h5>&nbsp;&nbsp;2.{i + 1}.1 เลือก platform ทั้งหมดที่ร้านที่ {store_name} ขายอยู่</h5>', unsafe_allow_html=True)
                 selected_platfrom = st.multiselect(
                         label = f'เลือก platform ทั้งหมดที่ร้านที่ **{store_name}** ขายอยู่', 
                         options = ['Shopee', 'Lazada', 'TikTok'], 
@@ -790,7 +790,7 @@ elif sidebar_radio == 'เช็คว่าต้องจด VAT หรือ�
                 selected_platform = [p for p in ['Shopee', 'Lazada', 'TikTok'] if p in st.session_state[f'selected_platform_{store_name}']]
 
                 st.write('')
-                st.markdown(f'<h5>&nbsp;&nbsp;🗂️ Upload ไฟล์ยอดขาย</h5>', unsafe_allow_html=True)
+                st.markdown(f'<h5>&nbsp;&nbsp;1.{i + 1}.2 Upload ไฟล์ยอดขายของร้าน {store_name}</h5>', unsafe_allow_html=True)
 
                 if selected_platform != []:
                     # if  f'{store_name}_current_select_tab' not in st.session_state:
@@ -1039,7 +1039,7 @@ elif sidebar_radio == 'เช็คว่าต้องจด VAT หรือ�
                         # **Only show form if calculation is completed**
                         if 'result_df' in st.session_state.keys():
                             with st.form("my_form"):
-                                st.markdown(f'<h5 style="text-align: center">&nbsp;&nbsp;📋 กรอกข้อมูลเพื่อรับไฟล์ผลคำนวณทาง Email 📋</h5>', unsafe_allow_html=True)
+                                st.markdown(f'<h5 style="text-align: center">&nbsp;&nbsp;📋 กรอกข้อมูลเพื่อรับไฟล์รายงานยอดขายรายวันทาง Email 📋</h5>', unsafe_allow_html=True)
 
                                 email_input = st.text_input("📧 Email", placeholder="your-email@email.com")
                                 email_valid = True
@@ -1134,9 +1134,6 @@ elif sidebar_radio == 'เช็คว่าต้องจด VAT หรือ�
                             send_email_with_attachment(receiver_email = email_input, df = result_df)
                             st.success(f"📩 อีเมลของคุณถูกส่งไปยัง {email_input} เรียบร้อยแล้ว!")
 
-
-                        
-
             else:
                 st.warning('ปุ่มคำนวณจะแสดงหลังจากอัพโหลดไฟล์ยอดขายครบทุกไฟล์', icon = 'ℹ️')
         else:
@@ -1168,9 +1165,9 @@ elif sidebar_radio == 'คำนวณ VAT':
         st.write('')
             
         for i, store_name in enumerate(store_name_ls):
-            st.subheader(f'2.{i + 1} {store_name}')
+            st.subheader(f'2.{i + 1} ร้าน {store_name}')
             st.write('')
-            st.markdown(f'<h5>&nbsp;&nbsp;🗂️ เลือก platform ทั้งหมดที่ร้านที่ {store_name} ขายอยู่</h5>', unsafe_allow_html=True)
+            st.markdown(f'<h5>&nbsp;&nbsp;2.{i + 1}.1 เลือก platform ทั้งหมดที่ร้านที่ {store_name} ขายอยู่</h5>', unsafe_allow_html=True)
             selected_platfrom = st.multiselect(
                     label = f'เลือก platform ทั้งหมดที่ร้านที่ **{store_name}** ขายอยู่', 
                     options = ['Shopee', 'Lazada', 'TikTok'], 
@@ -1183,7 +1180,7 @@ elif sidebar_radio == 'คำนวณ VAT':
             selected_platform = [p for p in ['Shopee', 'Lazada', 'TikTok'] if p in st.session_state[f'selected_platform_{store_name}']]
 
             st.write('')
-            st.markdown(f'<h5>&nbsp;&nbsp;🗂️ Upload ไฟล์ยอดขาย</h5>', unsafe_allow_html=True)
+            st.markdown(f'<h5>&nbsp;&nbsp;2.{i + 1}.2 Upload ไฟล์ยอดขายของร้าน {store_name}</h5>', unsafe_allow_html=True)
 
             if selected_platform != []:
                 # if  f'{store_name}_current_select_tab' not in st.session_state:
@@ -1267,7 +1264,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                                 st.warning(f'หลังจากอัพโหลดไฟล์ยอดขายจาก TikTok สำเร็จแล้ว tab จะเปลี่ยนเป็นสีเขียว', icon="ℹ️")
 
                 st.write('')
-                st.markdown(f'<h5>&nbsp;&nbsp;🗂️ Upload ไฟล์ใบเสร็จค่าธรรมเนียม</h5>', unsafe_allow_html=True)
+                st.markdown(f'<h5>&nbsp;&nbsp;2.{i + 1}.3 Upload ไฟล์ใบเสร็จค่าธรรมเนียมของร้าน {store_name}</h5>', unsafe_allow_html=True)
 
                 commission_tabs = st.tabs([f'Upload file ค่าธรรมเนียม: {platform}' for platform in selected_platform])
                 for k, commission_tab in enumerate(commission_tabs):
@@ -1551,6 +1548,16 @@ elif sidebar_radio == 'คำนวณ VAT':
                         value = "{:,.2f}".format(sale_df["vat"].sum()), 
                         border = True
                     )
+                    vat_report_col1.metric(
+                        label = 'ภาษีขาย (THB)', 
+                        value = "{:,.2f}".format(sale_df["vat"].sum()), 
+                        border = True
+                    )
+                    vat_report_col2.metric(
+                        label = 'ภาษีซื้อ (THB)', 
+                        value = "{:,.2f}".format(commission_df1["vat"].sum()), 
+                        border = True
+                    )
                     vat_report_col2.metric(
                         label = 'ภาษีซื้อ (THB)', 
                         value = "{:,.2f}".format(commission_df1["vat"].sum()), 
@@ -1615,11 +1622,8 @@ elif sidebar_radio == 'คำนวณ VAT':
                 if "form_submitted" not in st.session_state:
                     st.session_state.form_submitted = False  # Tracks form submission
 
-
-                # **Only show form if calculation is completed**
-
                 with st.form("my_form"):
-                    st.write("📋 **กรอกข้อมูลเพื่อรับผลคำนวณ VAT**")
+                    st.write("📋 **กรอกข้อมูลเพื่อไฟล์แนบการยื่น VAT** 📋")
 
                     email_input = st.text_input("📧 Email", placeholder="your-email@email.com")
                     email_valid = True
