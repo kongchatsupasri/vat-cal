@@ -1626,7 +1626,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                     st.session_state.form_submitted = False  # Tracks form submission
 
                 with st.form("my_form"):
-                    st.markdown(f'<h5 style="text-align: center">&nbsp;&nbsp;📋 กรอกข้อมูลเพื่อไฟล์แนบการยื่น VAT 📋</h5>', unsafe_allow_html=True)
+                    st.markdown(f'<h5 style="text-align: center">&nbsp;&nbsp;📋 กรอกข้อมูลเพื่อรับไฟล์แนบการยื่น VAT ทาง Email 📋</h5>', unsafe_allow_html=True)
 
                     email_input = st.text_input("📧 Email", placeholder="your-email@email.com")
                     email_valid = True
