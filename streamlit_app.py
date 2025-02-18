@@ -1554,7 +1554,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                         border = True
                     )
                     vat_report_col2.metric(
-                        label = 'ภาษีซื้อ (THB)', 
+                        label = 'ค่าใช้จ่ายก่อน VAT (THB)', 
                         value = "{:,.2f}".format(commission_df1["before_vat"].sum()), 
                         border = True
                     )
@@ -1564,7 +1564,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                         border = True
                     )
                     with vat_report_col3:
-                        st.write('##')
+                        st.write('#')
                     
                     vat_report_col3.metric(
                         label = 'VAT ที่ต้องจ่าย (THB)', 
