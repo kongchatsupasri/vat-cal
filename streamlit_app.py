@@ -1544,8 +1544,8 @@ elif sidebar_radio == 'คำนวณ VAT':
                 if ready_to_download:
                     vat_report_col1, vat_report_col2, vat_report_col3 = st.columns(3)
                     vat_report_col1.metric(
-                        label = 'ภาษีขาย (THB)', 
-                        value = "{:,.2f}".format(sale_df["vat"].sum()), 
+                        label = 'ยอดขายก่อน VAT (THB)', 
+                        value = "{:,.2f}".format(sale_df["before_vat"].sum()), 
                         border = True
                     )
                     vat_report_col1.metric(
@@ -1555,7 +1555,7 @@ elif sidebar_radio == 'คำนวณ VAT':
                     )
                     vat_report_col2.metric(
                         label = 'ภาษีซื้อ (THB)', 
-                        value = "{:,.2f}".format(commission_df1["vat"].sum()), 
+                        value = "{:,.2f}".format(commission_df1["before_vat"].sum()), 
                         border = True
                     )
                     vat_report_col2.metric(
@@ -1563,6 +1563,9 @@ elif sidebar_radio == 'คำนวณ VAT':
                         value = "{:,.2f}".format(commission_df1["vat"].sum()), 
                         border = True
                     )
+                    with vat_report_col3:
+                        st.write('##')
+                    
                     vat_report_col3.metric(
                         label = 'VAT ที่ต้องจ่าย (THB)', 
                         value = "{:,.2f}".format(sale_df["vat"].sum() - commission_df1["vat"].sum()), 
