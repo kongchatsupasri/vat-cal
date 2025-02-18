@@ -720,7 +720,7 @@ if sidebar_radio == 'About':
     # </div>
     # """,
     # unsafe_allow_html=True
-)
+# )
     st.divider()
     st.markdown(
     """\n
